@@ -12,7 +12,7 @@
   #cap { position: fixed; left: 0; right: 0; top: 42%; text-align: center; font-size: clamp(20px, 5vw, 34px); letter-spacing: .12em; text-shadow: 0 0 18px #2f9bff; opacity: 0; transition: opacity 1.2s; pointer-events: none; padding: 0 20px; }
   #hint { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; opacity: 0; transition: opacity 1.5s; pointer-events: none; }
   #skip { position: fixed; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); background: none; border: 1px solid #4aa3ff88; color: #9fd0ff; border-radius: 20px; padding: 6px 14px; font: 13px Georgia, serif; cursor: pointer; }
-  #card { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px) scale(.95); width: min(86vw, 380px); box-sizing: border-box; padding: 20px 24px; border-radius: 16px; background: rgba(4, 22, 60, .92); border: 1px solid #4aa3ff99; box-shadow: 0 0 40px #1a6cff66; opacity: 0; pointer-events: none; transition: .4s; text-align: center; }
+  #card { max-height: 72vh; overflow-y: auto; position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px) scale(.95); width: min(86vw, 380px); box-sizing: border-box; padding: 20px 24px; border-radius: 16px; background: rgba(4, 22, 60, .92); border: 1px solid #4aa3ff99; box-shadow: 0 0 40px #1a6cff66; opacity: 0; pointer-events: none; transition: .4s; text-align: center; }
   #card.on { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
   #back { display: none; position: fixed; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); background: none; border: 1px solid #4aa3ff88; color: #9fd0ff; border-radius: 20px; padding: 6px 14px; font: 13px Georgia, serif; cursor: pointer; }
   #card h2 { margin: 0 0 8px; font-weight: normal; letter-spacing: .06em; color: #8fd0ff; }
@@ -24,6 +24,8 @@
   #start h1 { margin: 0; font-weight: normal; letter-spacing: .14em; font-size: clamp(24px, 6vw, 40px); text-shadow: 0 0 18px #2f9bff; }
   #start p { margin: 0; font-size: 14px; letter-spacing: .12em; color: #9fd0ff; animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  #cm { display: none; gap: 8px; margin: 0 0 14px; overflow-x: auto; scroll-snap-type: x mandatory; }
+  #cm img, #cm video { flex: 0 0 100%; width: 100%; max-height: 36vh; object-fit: contain; scroll-snap-align: center; border-radius: 10px; background: #020c22; }
 </style>
 </head>
 <body>
@@ -34,15 +36,22 @@
 <button id="skip">Saltar</button>
 <button id="back">← Alejar</button>
 <div id="mhint">♪ Toca la pantalla para activar la música</div>
-<div id="card"><h2 id="ct"></h2><p id="cp"></p><small>toca para cerrar</small></div>
+<div id="card"><h2 id="ct"></h2><div id="cm"></div><p id="cp"></p><small>toca para cerrar</small></div>
 <script>
 // ====== PERSONALIZA AQUÍ: cada planeta es un punto de interés ======
-const PLANETS = [
-  { name: "Nuestro comienzo", text: "Aquí escribe el recuerdo de cómo empezó todo.", r: 26, size: 2.2, hue: 195, speed: .22 },
-  { name: "Una risa juntos",  text: "Aquí escribe ese momento que siempre te hace reír.", r: 34, size: 2.8, hue: 210, speed: .16 },
-  { name: "Lo que admiro",    text: "Aquí escribe lo que más admiras de esta persona.", r: 42, size: 2.0, hue: 225, speed: .12 },
-  { name: "Un sueño",         text: "Aquí escribe un sueño que quieran cumplir juntos.", r: 50, size: 3.2, hue: 200, speed: .09 },
-  { name: "Para ti",          text: "Aquí escribe tu mensaje final.", r: 57, size: 2.4, hue: 235, speed: .07 }
+// Para añadir foto o video a la tarjeta, agrega  media: "fotos/mi-foto.jpg"  (ruta RELATIVA a este index.html)
+// o varias:  media: ["fotos/a.jpg", "videos/b.mp4"]  (se deslizan de lado). Formatos: jpg, png, gif, webp, mp4, webm.
+const PLANETS = [ // en orden cronológico: el 1 es el más cercano al corazón y el 10 el más lejano
+  { name: "Nuestro primer encuentro", text: "Aquí cuenta cómo y dónde se conocieron.", r: 22, size: 2.2, hue: 195, speed: 0.22, ph: 0.0 },
+  { name: "Problemas", text: "Aquí escribe las dificultades que enfrentaron y lo que aprendieron.", r: 26, size: 2.6, hue: 210, speed: 0.203, ph: 2.4 },
+  { name: "Amor por primera vez", text: "Aquí escribe cuándo sintieron por primera vez que era amor.", r: 30, size: 2.0, hue: 200, speed: 0.186, ph: 4.8 },
+  { name: "Nuestras diferencias", text: "Aquí escribe en qué se distinguen y cómo se complementan.", r: 34, size: 2.8, hue: 255, speed: 0.169, ph: 7.2 },
+  { name: "Tiempo juntos", text: "Aquí escribe los momentos que más disfrutan compartir.", r: 38, size: 2.3, hue: 190, speed: 0.152, ph: 9.6 },
+  { name: "Primer aniversario", text: "Aquí escribe cómo fue celebrar su primer año.", r: 42, size: 3.0, hue: 215, speed: 0.135, ph: 12.0 },
+  { name: "Navidad", text: "Aquí escribe el recuerdo de su Navidad juntos.", r: 46, size: 2.1, hue: 170, speed: 0.118, ph: 14.4 },
+  { name: "Amor y Amistad", text: "Aquí escribe lo que vivieron en su Amor y Amistad.", r: 50, size: 2.6, hue: 205, speed: 0.101, ph: 16.8 },
+  { name: "Más diferencias...", text: "Aquí escribe las nuevas diferencias y cómo las superaron.", r: 54, size: 2.4, hue: 265, speed: 0.084, ph: 19.2 },
+  { name: "Nuestro futuro", text: "Aquí escribe todo lo que sueñan construir juntos.", r: 58, size: 3.4, hue: 225, speed: 0.067, ph: 21.6 }
 ];
 const CAPTIONS = [];
 const _OLD = ["Recorriendo el universo…", "Entre miles de millones de estrellas…", "Hay una galaxia con un corazón"];
@@ -117,7 +126,7 @@ for (let i = 0, NB = MOB ? 600 : 1100; i < NB; i++) {
   G.push({ x: Math.cos(a) * r, y: g3() * 3 * (1 - r / 18), z: Math.sin(a) * r, hue: 185 + Math.random() * 20, l: 82 + Math.random() * 15, s: Math.random() * 1.5 + 1, tw: Math.random() * 6.28 });
 }
 G.forEach(o => { o.x *= GS; o.y *= GS; o.z *= GS; });
-PLANETS.forEach(p => { p.r *= GS; p.size *= GS; });
+PLANETS.forEach((p, i) => { p.r *= GS; p.size *= GS; p.n = i + 1; p.oy = Math.sin(i * 2.1) * 6 * GS; });
 // Corazón (solo contorno, de pie sobre el centro)
 const HY = 15 * GS, Hh = [];
 for (let i = 0; i < 2200; i++) {
@@ -179,31 +188,50 @@ cv.addEventListener('pointerup', e => {
 });
 cv.addEventListener('pointercancel', e => { ptr.delete(e.pointerId); pinch = 0; drag = false; });
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.min(2.6, Math.max(.5, zoom * (e.deltaY < 0 ? 1.08 : .92))); }, { passive: false });
-card.addEventListener('click', () => card.classList.remove('on'));
+card.addEventListener('click', () => { card.classList.remove('on'); stopMedia(); });
+document.getElementById('cm').addEventListener('click', e => e.stopPropagation());
 document.getElementById('skip').addEventListener('click', () => { skipped = true; t0 = performance.now() - INTRO * 1000; document.getElementById('skip').style.display = 'none'; });
 
+// ===== Foto / video en la tarjeta =====
+function duck(d) { try { if (el) el.volume = d ? .15 : 1; else if (AC && master) { master.gain.cancelScheduledValues(AC.currentTime); master.gain.linearRampToValueAtTime(d ? .12 : .8, AC.currentTime + .6); } } catch (e) {} }
+function stopMedia() { document.querySelectorAll('#cm video').forEach(v => v.pause()); }
+function setMedia(list) {
+  const cm = document.getElementById('cm'); cm.innerHTML = '';
+  [].concat(list || []).filter(Boolean).forEach(src => {
+    const isV = /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(src), n = document.createElement(isV ? 'video' : 'img'); n.src = src;
+    if (isV) { n.controls = true; n.playsInline = true; n.preload = 'metadata'; n.addEventListener('play', () => duck(true)); n.addEventListener('pause', () => duck(false)); n.addEventListener('ended', () => duck(false)); }
+    n.addEventListener('error', () => { n.remove(); if (!cm.children.length) cm.style.display = 'none'; });
+    cm.appendChild(n);
+  });
+  cm.style.display = cm.children.length ? 'flex' : 'none';
+}
+
 // ===== Acercamiento a un planeta =====
-let foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0;
+let pt = 0, cam0 = 100, foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0;
 const back = document.getElementById('back');
-const ppos = (p, now) => { const a = now / 1000 * p.speed * .6 + p.r; return [Math.cos(a) * p.r, 0, Math.sin(a) * p.r]; };
+const ppos = (p, now) => { const a = pt / 1000 * p.speed * .6 + p.ph; return [Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r]; };
 function focusOn(p) {
   from = fpos.slice(); sw = 0; foc = p; seen.add(p.name);
-  document.getElementById('ct').textContent = p.name; document.getElementById('cp').textContent = p.text;
+  document.getElementById('ct').textContent = p.n + ' · ' + p.name; document.getElementById('cp').textContent = p.text; setMedia(p.media);
   card.classList.remove('on'); clearTimeout(cardTimer); cardTimer = setTimeout(() => card.classList.add('on'), 1100);
   back.style.display = 'block'; hint.style.opacity = 0;
 }
 function unfocus() {
   if (!foc) return;
   from = fpos.slice(); sw = 0; foc = null; clearTimeout(cardTimer);
-  card.classList.remove('on'); back.style.display = 'none'; hint.style.opacity = .7;
+  card.classList.remove('on'); stopMedia(); back.style.display = 'none'; hint.style.opacity = .7;
 }
 back.addEventListener('click', unfocus);
 function hit(px, py) {
   if ((performance.now() - t0) / 1000 < INTRO) return;
   let best = null, bd = 1e9;
-  for (const p of PLANETS) { const d = Math.hypot(px - p.sx, py - p.sy); if (d < Math.max(p.sr * 1.6, 34 * DPR) && d < bd) { bd = d; best = p; } }
+  for (const p of PLANETS) {
+    if (!(p.sk > 0) || cam0 + p.sz < 2) continue;
+    const hr = Math.max(p.sr * 1.4, 30 * DPR), d = Math.hypot(px - p.sx, py - p.sy); if (d > hr) continue;
+    const sc = d / hr + p.sz / 400; if (sc < bd) { bd = sc; best = p; }
+  }
   if (!best) return unfocus();
-  if (best === foc) { clearTimeout(cardTimer); card.classList.toggle('on'); } else focusOn(best);
+  if (best === foc) { clearTimeout(cardTimer); card.classList.toggle('on'); if (!card.classList.contains('on')) stopMedia(); } else focusOn(best);
 }
 
 const INTRO = 6.5; let t0 = performance.now(), capIdx = -1;
@@ -225,11 +253,12 @@ function frame(now) {
   // Galaxia
   if (ti < 1) { rx = .04 + (H > W ? .3 : .2) * e; ry += .0015; } else if (!drag) { vx *= .95; vy += (.003 - vy) * .02; rx = Math.min(1.5, Math.max(-.2, rx + vx)); ry += vy; }
   const dt = Math.min(.05, Math.max(0, (now - lastNow) / 1000)); lastNow = now;
+  if (!drag) pt += dt * 1000; // los planetas se detienen mientras giras la cámara
   sw = Math.min(1, sw + dt / 1.3);
   { const s = sm(sw), tp = foc ? ppos(foc, now) : [0, 0, 0]; for (let i = 0; i < 3; i++) fpos[i] = from[i] * (1 - s) + tp[i] * s; }
   { const tgt = foc ? 1 : 0; fzL += Math.sign(tgt - fzL) * Math.min(Math.abs(tgt - fzL), dt / 1.3); }
   const fz = sm(fzL); if (foc) nearD += (foc.size * 4.5 - nearD) * Math.min(1, dt * 6);
-  const galA = sm(Math.max(0, (ti - .3) / .5)), cam = (900 * (1 - e) + 122 * e) * (1 - fz) + nearD * fz;
+  const galA = sm(Math.max(0, (ti - .3) / .5)), cam = (900 * (1 - e) + 122 * e) * (1 - fz) + nearD * fz; cam0 = cam;
   const f = m * .9 * (zoom * (1 - fz) + fz);
   const cy = Math.cos(ry), sy = Math.sin(ry), cX = Math.cos(rx), sX = Math.sin(rx);
   const beat = 1 + Math.sin(now / 420) * .035;
@@ -301,19 +330,19 @@ function frame(now) {
 
   // Planetas (ordenados por profundidad)
   ctx.globalCompositeOperation = 'source-over';
-  const list = PLANETS.map(p => { const a = now / 1000 * p.speed * .6 + p.r; const q = proj(Math.cos(a) * p.r, 0, Math.sin(a) * p.r); p.sx = q[0]; p.sy = q[1]; p.sr = p.size * q[2]; return { p, q }; }).sort((a, b) => b.q[3] - a.q[3]);
+  const list = PLANETS.map(p => { const q = proj(...ppos(p, now)); p.sx = q[0]; p.sy = q[1]; p.sr = p.size * q[2]; p.sk = q[2]; p.sz = q[3]; return { p, q }; }).sort((a, b) => b.q[3] - a.q[3]);
   for (const { p, q } of list) {
     const r = p.sr; if (r <= 0 || q[2] <= 0 || cam + q[3] < 2) continue;
     // órbita tenue
     ctx.globalAlpha = .12 * galA * (1 - fz * .8); ctx.strokeStyle = '#6ab7ff'; ctx.lineWidth = DPR; ctx.beginPath();
     let pen = false;
-    for (let i = 0; i <= 64; i++) { const a = i / 64 * 6.283, o = proj(Math.cos(a) * p.r, 0, Math.sin(a) * p.r); if (cam + o[3] < 2) { pen = false; continue; } pen ? ctx.lineTo(o[0], o[1]) : ctx.moveTo(o[0], o[1]); pen = true; } ctx.stroke();
+    for (let i = 0; i <= 64; i++) { const a = i / 64 * 6.283, o = proj(Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r); if (cam + o[3] < 2) { pen = false; continue; } pen ? ctx.lineTo(o[0], o[1]) : ctx.moveTo(o[0], o[1]); pen = true; } ctx.stroke();
     ctx.globalAlpha = galA;
     const g = ctx.createRadialGradient(q[0] - r * .35, q[1] - r * .35, r * .1, q[0], q[1], r * 1.05);
     g.addColorStop(0, `hsl(${p.hue},100%,85%)`); g.addColorStop(.6, `hsl(${p.hue},85%,45%)`); g.addColorStop(1, `hsl(${p.hue + 15},90%,15%)`);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 6.283); ctx.fill();
     if (!seen.has(p.name)) { const pu = (now / 1200) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA; ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.5 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], r * (1.4 + pu * 1.2), 0, 6.283); ctx.stroke(); }
-    if (ti >= 1 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(11, Math.min(14, m / DPR / 30)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.name, q[0], q[1] + r + 15 * DPR); }
+    if (ti >= 1 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(11, Math.min(14, m / DPR / 30)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.n + ' · ' + p.name, q[0], q[1] + r + 15 * DPR); }
   }
   ctx.globalAlpha = 1;
   requestAnimationFrame(frame);
