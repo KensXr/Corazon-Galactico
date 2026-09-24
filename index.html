@@ -139,6 +139,20 @@ function flower(x, y, r, rot, a) {
   }
   ctx.restore();
 }
+// Lluvia de estrellas: cada tanto, en un lugar distinto del cielo
+const M = []; let nextSh = 0, lsx = 9, lsy = 9;
+// Flores azules de otro tipo (margarita)
+const FY = Array.from({ length: MOB ? 6 : 10 }, () => ({ x: (Math.random() * 2 - 1) * 300, y: (Math.random() * 2 - 1) * 120, z: (Math.random() * 2 - 1) * 300, r: 2.5 + Math.random() * 4.5, vx: (Math.random() * .5 + .2) * .003, ph: Math.random() * 6.28, rot: Math.random() * 6.28 }));
+function daisy(x, y, r, rot, a) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.globalAlpha = a;
+  for (let i = 0; i < 14; i++) {
+    ctx.rotate(6.283 / 14); const g = ctx.createLinearGradient(0, 0, 0, -r);
+    g.addColorStop(0, '#0a3fbf'); g.addColorStop(.5, '#2f9bff'); g.addColorStop(1, '#c4f2ff');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, -r * .68, r * .11, r * .32, 0, 0, 6.283); ctx.fill();
+  }
+  const c = ctx.createRadialGradient(0, 0, 0, 0, 0, r * .33); c.addColorStop(0, '#f2fdff'); c.addColorStop(.7, '#7fdcff'); c.addColorStop(1, '#1f7bff');
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0, 0, r * .33, 0, 6.283); ctx.fill(); ctx.restore();
+}
 // Estrellas de fondo / warp
 const ST = [];
 for (let i = 0, NS = MOB ? 1600 : 2600; i < NS; i++) {
@@ -242,6 +256,34 @@ function frame(now) {
   for (const f of FL) {
     const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2500 + f.ph) * 3, f.z); if (q[2] <= 0 || cam + q[3] < 6) continue;
     flower(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 5000 * (f.ph - 3), .85 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)));
+  }
+  for (const f of FY) {
+    const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2800 + f.ph) * 3, f.z); if (q[2] <= 0 || cam + q[3] < 6) continue;
+    daisy(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 6000 * (f.ph - 3), .9 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)));
+  }
+  // ===== Lluvia de estrellas =====
+  if (ti >= 1) {
+    if (!nextSh) nextSh = now + 2500;
+    if (now > nextSh) {
+      nextSh = now + 12000 + Math.random() * 10000;
+      const toW = (X, Y, Z, pos) => { const y = Y * cX + Z * sX, z0 = -Y * sX + Z * cX; return [X * cy - z0 * sy + (pos ? fpos[0] : 0), y + (pos ? fpos[1] : 0), X * sy + z0 * cy + (pos ? fpos[2] : 0)]; };
+      let bx = 0, by = 0; for (let t = 0; t < 8; t++) { bx = Math.random() - .5; by = -.5 + Math.random() * .18; if (Math.abs(bx - lsx) > .3) break; } lsx = bx; lsy = by;
+      const dir = Math.random() < .5 ? 1 : -1, ang = .1 + Math.random() * .22, n = 7 + Math.floor(Math.random() * 6);
+      for (let i = 0; i < n; i++) {
+        const Zc = 90 + Math.random() * 200, k = f / (cam + Zc), sp = (.5 + Math.random() * .25) * Math.min(W, H * 1.2) / k, a = ang + (Math.random() - .5) * .1;
+        const [x, y, z] = toW((bx + (Math.random() - .5) * .35) * W / k, -(by + (Math.random() - .5) * .2) * H / k, Zc, true), [vx, vy, vz] = toW(dir * Math.cos(a) * sp, -Math.sin(a) * sp, 0, false);
+        M.push({ x, y, z, vx, vy, vz, s: now + i * (120 + Math.random() * 180), life: 700 + Math.random() * 600 });
+      }
+    }
+  }
+  for (let i = M.length - 1; i >= 0; i--) {
+    const m = M[i], age = now - m.s; if (age < 0) continue; if (age > m.life) { M.splice(i, 1); continue; }
+    const u = age / 1000, tu = Math.max(0, u - .25), q1 = proj(m.x + m.vx * u, m.y + m.vy * u, m.z + m.vz * u), q0 = proj(m.x + m.vx * tu, m.y + m.vy * tu, m.z + m.vz * tu);
+    if (q1[2] <= 0 || q0[2] <= 0) continue;
+    const a = Math.sin(Math.PI * age / m.life), g = ctx.createLinearGradient(q0[0], q0[1], q1[0], q1[1]);
+    g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(1, `rgba(235,250,255,${a})`);
+    ctx.globalAlpha = 1; ctx.strokeStyle = g; ctx.lineWidth = 1.8 * DPR; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke();
+    ctx.globalAlpha = a; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(q1[0], q1[1], 1.8 * DPR, 0, 6.283); ctx.fill();
   }
   for (const o of G) dot(o, 1, .75, false);
   for (const o of Hh) dot(o, beat, .95, true);
