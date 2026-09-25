@@ -202,7 +202,7 @@ cv.addEventListener('pointerup', e => {
 });
 cv.addEventListener('pointercancel', e => { ptr.delete(e.pointerId); pinch = 0; drag = false; });
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.min(2.6, Math.max(.5, zoom * (e.deltaY < 0 ? 1.08 : .92))); }, { passive: false });
-card.addEventListener('click', () => closeCard());
+card.addEventListener('click', () => { if (foc) unfocus(); else closeCard(); }); // con un planeta enfocado, cerrar la tarjeta también aleja la cámara
 document.getElementById('cm').addEventListener('click', e => e.stopPropagation());
 document.getElementById('skip').addEventListener('click', () => { skipped = true; t0 = performance.now() - INTRO * 1000; document.getElementById('skip').style.display = 'none'; });
 
