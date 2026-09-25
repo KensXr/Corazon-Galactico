@@ -82,6 +82,11 @@ function tone(f, t, d, v, a) {
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + d);
   o.connect(g); g.connect(bus); o.start(t); o.stop(t + d + .1);
 }
+function heartBeatTick() {
+  if (el || !AC || !on) return; // con canción propia no agregamos sonido extra, para no chocar con ella
+  const t = AC.currentTime;
+  tone(hz(33), t, .5, .22, .008); tone(hz(45), t, .38, .13, .012); tone(hz(64), t + .07, .3, .05, .02);
+}
 function bar(t, n) {
   const ch = CH[n % 4];
   ch.forEach((m, i) => { tone(hz(m), t, 9, .045, 3); tone(hz(m) * 1.004, t, 9, .03, 3.5); });
@@ -221,11 +226,13 @@ function setMedia(list) {
 }
 
 // ===== Acercamiento a un planeta =====
-let pt = 0, cam0 = 100, foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0, heartX = 0, heartY = 0, heartK = 0, doneT = 0;
+let pt = 0, heartPhase = 0, cam0 = 100, foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0, heartX = 0, heartY = 0, heartK = 0, doneT = 0;
 const HEART = { isHeart: true }; // objeto especial: se activa cuando ya se tocaron todos los planetas y estrellas
-const HEART_ZOOM = 27; // qué tan cerca queda la cámara del corazón al entrar (menor = más cerca)
+const HEART_ZOOM = 33;
+const FINAL_BPM = 70; // pulso del corazón al final, en beats por minuto, cuando usas la música ambiente generada
+const SONG_BPM = null; // si cargas tu propia canción y quieres que el latido vaya a SU ritmo, pon aquí su BPM (ej. 120). El primer beat de tu canción debe caer justo al iniciarla (segundo 0). // qué tan cerca queda la cámara del corazón al entrar (menor = más cerca)
 let collapsing = false, collapseStart = 0; // colapso final: al tocar el corazón, todo el universo se comprime hacia él
-const COLLAPSE_DUR = 5200; // duración del colapso final en ms
+const COLLAPSE_DUR = 6200; // duración del colapso final en ms
 const back = document.getElementById('back');
 const TAPPABLE = PLANETS.concat(MSTARS); // todo lo que responde al toque
 let unlocked = 1; // cronología: cuántos planetas están desbloqueados (1 = solo el primero)
@@ -249,7 +256,8 @@ function unfocus() {
 back.addEventListener('click', unfocus);
 function triggerCollapse() {
   if (collapsing) return;
-  collapsing = true; collapseStart = performance.now();
+  collapsing = true; collapseStart = performance.now(); heartPhase = 0;
+  if (el && SONG_BPM) { try { el.currentTime = 0; el.play(); } catch (e) {} }
   from = fpos.slice(); sw = 0; foc = HEART; curStar = null; clearTimeout(cardTimer);
   card.classList.remove('on'); stopMedia();
   back.style.display = 'none'; hint.style.opacity = 0;
@@ -305,27 +313,35 @@ function frame(now) {
   // Galaxia
   if (ti < 1) { rx = .04 + (H > W ? .3 : .2) * e; ry += .0015; } else if (!drag) { vx *= .95; vy += (.003 - vy) * .02; rx = Math.min(1.5, Math.max(-.2, rx + vx)); ry += vy; }
   const dt = Math.min(.05, Math.max(0, (now - lastNow) / 1000)); lastNow = now;
-  const colRaw = collapsing ? Math.min(1, (now - collapseStart) / COLLAPSE_DUR) : 0, colE = ease(colRaw);
-  const fadeOther = 1 - colE, shrinkOther = fadeOther, growHeart = 1 + colE * 7; // todo lo demás se comprime y se desvanece; el corazón crece
+  const colRaw = collapsing ? Math.min(1, (now - collapseStart) / COLLAPSE_DUR) : 0;
+  const SPLIT = .8; // el universo se comprime (0 a SPLIT); el acercamiento de cámara arranca en 2/3; el corazón crece después, al final (SPLIT a 1) // primero se comprime el universo (0 a SPLIT), luego crece el corazón (SPLIT a 1)
+  const colE = ease(Math.min(1, colRaw / SPLIT)); // progreso de "el universo se comprime"
+  const colE2 = ease(Math.max(0, (colRaw - SPLIT) / (1 - SPLIT))); // progreso de "el corazón crece", empieza después
+  const fadeOther = 1 - Math.pow(colE, 3), shrinkOther = fadeOther, growHeart = 1 + colE2 * .15; // todo lo demás se comprime primero; el corazón crece después
   if (!drag) pt += dt * 1000; // los planetas se detienen mientras giras la cámara
   for (const p of PLANETS) p.la += ((p.n <= unlocked ? 1 : 0) - p.la) * Math.min(1, dt * 3);
   sw = Math.min(1, sw + dt / 1.3);
   { const s = sm(sw), tp = foc ? (foc.isHeart ? [0, HY, 0] : ppos(foc, now)) : [0, 0, 0]; for (let i = 0; i < 3; i++) fpos[i] = from[i] * (1 - s) + tp[i] * s; }
-  { const tgt = foc ? 1 : 0; fzL += Math.sign(tgt - fzL) * Math.min(Math.abs(tgt - fzL), dt / 1.3); }
+  { const tgt = (foc && (!foc.isHeart || colRaw >= 2 / 3)) ? 1 : 0; fzL += Math.sign(tgt - fzL) * Math.min(Math.abs(tgt - fzL), dt / 1.3); }
   const fz = sm(fzL); if (foc) nearD += ((foc.isHeart ? HEART_ZOOM : foc.size * 4.5) - nearD) * Math.min(1, dt * 6);
-  const heartReady = seen.size >= TAPPABLE.length; doneT += ((heartReady ? 1 : 0) - doneT) * Math.min(1, dt * 2); // se vuelve 1 al tocar todo
+  const heartReady = seen.size >= TAPPABLE.length; doneT += ((heartReady ? 1 : 0) - doneT) * Math.min(1, dt * 9); // se vuelve 1 al tocar todo
   const galA = sm(Math.max(0, (ti - .3) / .5)), cam = (900 * (1 - e) + 122 * e) * (1 - fz) + nearD * fz; cam0 = cam;
   const f = m * .9 * (zoom * (1 - fz) + fz);
   const cy = Math.cos(ry), sy = Math.sin(ry), cX = Math.cos(rx), sX = Math.sin(rx);
-  const beat = 1 + Math.sin(now / (420 - 190 * doneT)) * (.035 + .085 * doneT);
+  const finalBeatMs = 60000 / (SONG_BPM || FINAL_BPM), beatT = (420 - 190 * doneT) * (1 - colE2) + finalBeatMs * colE2;
+  const prevPhase = heartPhase; heartPhase += dt * 1000 / beatT;
+  const beat = 1 + Math.sin(heartPhase) * (.035 + .085 * doneT + .04 * colE2);
+  // ¿cruzó un ciclo completo? -> ese es el instante exacto de "un latido", ahí sincronizamos el sonido
+  if (collapsing && Math.floor(heartPhase / 6.283) > Math.floor(prevPhase / 6.283)) heartBeatTick();
   const proj = (x, y, z, shrink) => { x -= fpos[0]; y -= fpos[1]; z -= fpos[2]; if (shrink !== undefined) { x *= shrink; y *= shrink; z *= shrink; } const X = x * cy + z * sy, Z0 = -x * sy + z * cy, Y = y * cX - Z0 * sX, Z = y * sX + Z0 * cX, D = cam + Z, k = D < .5 ? 0 : f / D; return [cx0 + X * k, cy0 - Y * k, k, Z]; };
   const diskAng = pt / 1000 * DISK_W;
-  const dot = (o, sc, a, glow, shrink) => {
+  const dot = (o, sc, a, glow, shrink, hueMix) => {
     const [rx2, rz2] = spin(o.x * sc, o.z * sc, diskAng);
     const [px, py, k] = proj(rx2, o.y * sc, rz2, shrink); if (k <= 0) return;
     const tw = .6 + .4 * Math.sin(now / 500 + o.tw), grow = shrink !== undefined && shrink > 1 ? Math.sqrt(shrink) : 1;
     const d = Math.min(7 * DPR * grow, Math.max(DPR * .8, o.s * k * .55 * (glow ? 1.3 : 1) * grow));
-    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${o.hue},100%,${o.l}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
+    const hue = hueMix ? o.hue + (352 - o.hue) * hueMix : o.hue;
+    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${hue},100%,${o.l}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
   };
   // ===== Fondo 3D: nebulosas, estrellas y flores en el espacio =====
   for (const n of NEB) {
@@ -374,7 +390,7 @@ function frame(now) {
     ctx.globalAlpha = a; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(q1[0], q1[1], 1.8 * DPR, 0, 6.283); ctx.fill();
   }
   for (const o of G) dot(o, 1, .75, false, shrinkOther);
-  for (const o of Hh) dot(o, beat, .95, true, growHeart);
+  for (const o of Hh) dot(o, beat, .95, true, growHeart, doneT);
 
   { const [ox, oy, ok] = proj(0, 0, 0, shrinkOther), sq = .16 + sX * .9;
     for (const [rr, w] of [[ok * 26 * GS, 1.8], [ok * 9 * GS, 1.3]]) {
@@ -382,10 +398,10 @@ function frame(now) {
       const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, rr); cg.addColorStop(0, 'rgba(255,255,255,1)'); cg.addColorStop(.2, 'rgba(210,248,255,.85)'); cg.addColorStop(.5, 'rgba(90,220,255,.4)'); cg.addColorStop(1, 'rgba(20,90,255,0)');
       ctx.globalAlpha = galA * fadeOther; ctx.fillStyle = cg; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore(); } }
   // Resplandor del corazón (crece y se torna más cálido al completar la cronología, y se expande al colapsar el universo)
-  const [hx, hy, hk] = proj(0, HY, 0), gr = hk * (12 + 5 * doneT) * (1 + colE * 14);
+  const [hx, hy, hk] = proj(0, HY, 0), gr = hk * (12 + 5 * doneT) * (1 + colE2 * 4);
   heartX = hx; heartY = hy; heartK = hk;
   const gl = ctx.createRadialGradient(hx, hy, 0, hx, hy, gr);
-  gl.addColorStop(0, `rgba(${120 + 90 * doneT},${220 - 10 * doneT},${255 - 120 * doneT},${.28 + .24 * doneT})`); gl.addColorStop(1, 'rgba(20,80,255,0)');
+  gl.addColorStop(0, `rgba(${120 + 130 * doneT},${220 - 160 * doneT},${255 - 235 * doneT},${.28 + .24 * doneT})`); gl.addColorStop(1, 'rgba(20,80,255,0)');
   ctx.globalAlpha = galA; ctx.fillStyle = gl; ctx.fillRect(hx - gr, hy - gr, gr * 2, gr * 2);
   if (heartReady && !(foc && foc.isHeart)) { const pu = (now / 1400) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA; ctx.strokeStyle = 'rgba(255,224,170,.95)'; ctx.lineWidth = 1.6 * DPR; ctx.beginPath(); ctx.arc(hx, hy, gr * (1.15 + pu * .85), 0, 6.283); ctx.stroke(); }
 
