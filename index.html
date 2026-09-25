@@ -42,16 +42,16 @@
 // Para añadir foto o video a la tarjeta, agrega  media: "fotos/mi-foto.jpg"  (ruta RELATIVA a este index.html)
 // o varias:  media: ["fotos/a.jpg", "videos/b.mp4"]  (se deslizan de lado). Formatos: jpg, png, gif, webp, mp4, webm.
 const PLANETS = [ // en orden cronológico: el 1 es el más cercano al corazón y el 10 el más lejano
-  { name: "Nuestro primer encuentro", text: "Aquí cuenta cómo y dónde se conocieron.", r: 22, size: 2.2, hue: 195, speed: 0.22, ph: 0.0 },
-  { name: "Problemas", text: "Aquí escribe las dificultades que enfrentaron y lo que aprendieron.", r: 26, size: 2.6, hue: 210, speed: 0.203, ph: 2.4 },
-  { name: "Amor por primera vez", text: "Aquí escribe cuándo sintieron por primera vez que era amor.", r: 30, size: 2.0, hue: 200, speed: 0.186, ph: 4.8 },
-  { name: "Nuestras diferencias", text: "Aquí escribe en qué se distinguen y cómo se complementan.", r: 34, size: 2.8, hue: 255, speed: 0.169, ph: 7.2 },
-  { name: "Tiempo juntos", text: "Aquí escribe los momentos que más disfrutan compartir.", r: 38, size: 2.3, hue: 190, speed: 0.152, ph: 9.6 },
-  { name: "Primer aniversario", text: "Aquí escribe cómo fue celebrar su primer año.", r: 42, size: 3.0, hue: 215, speed: 0.135, ph: 12.0 },
-  { name: "Navidad", text: "Aquí escribe el recuerdo de su Navidad juntos.", r: 46, size: 2.1, hue: 170, speed: 0.118, ph: 14.4 },
-  { name: "Amor y Amistad", text: "Aquí escribe lo que vivieron en su Amor y Amistad.", r: 50, size: 2.6, hue: 205, speed: 0.101, ph: 16.8 },
-  { name: "Más diferencias...", text: "Aquí escribe las nuevas diferencias y cómo las superaron.", r: 54, size: 2.4, hue: 265, speed: 0.084, ph: 19.2 },
-  { name: "Nuestro futuro", text: "Aquí escribe todo lo que sueñan construir juntos.", r: 58, size: 3.4, hue: 225, speed: 0.067, ph: 21.6 }
+  { name: "Nuestro primer encuentro", text: "Aquí cuenta cómo y dónde se conocieron.", r: 22, size: 2.2, hue: 195, speed: 0.16, ph: 0.0 },
+  { name: "Problemas", text: "Aquí escribe las dificultades que enfrentaron y lo que aprendieron.", r: 26, size: 2.6, hue: 210, speed: 0.16, ph: 2.4 },
+  { name: "Amor por primera vez", text: "Aquí escribe cuándo sintieron por primera vez que era amor.", r: 30, size: 2.0, hue: 200, speed: 0.16, ph: 4.8 },
+  { name: "Nuestras diferencias", text: "Aquí escribe en qué se distinguen y cómo se complementan.", r: 34, size: 2.8, hue: 255, speed: 0.16, ph: 7.2 },
+  { name: "Tiempo juntos", text: "Aquí escribe los momentos que más disfrutan compartir.", r: 38, size: 2.3, hue: 190, speed: 0.16, ph: 9.6 },
+  { name: "Primer aniversario", text: "Aquí escribe cómo fue celebrar su primer año.", r: 42, size: 3.0, hue: 215, speed: 0.16, ph: 12.0 },
+  { name: "Navidad", text: "Aquí escribe el recuerdo de su Navidad juntos.", r: 46, size: 2.1, hue: 170, speed: 0.16, ph: 14.4 },
+  { name: "Amor y Amistad", text: "Aquí escribe lo que vivieron en su Amor y Amistad.", r: 50, size: 2.6, hue: 205, speed: 0.16, ph: 16.8 },
+  { name: "Más diferencias...", text: "Aquí escribe las nuevas diferencias y cómo las superaron.", r: 54, size: 2.4, hue: 265, speed: 0.16, ph: 19.2 },
+  { name: "Nuestro futuro", text: "Aquí escribe todo lo que sueñan construir juntos.", r: 58, size: 3.4, hue: 225, speed: 0.16, ph: 21.6 }
 ];
 // Estrellas con mensaje: se pueden tocar en cualquier momento (no forman parte de la cronología).
 // Igual que los planetas, admiten  media: "fotos/mi-foto.jpg"  o una lista de fotos/videos.  Agrega o quita las que quieras.
@@ -221,12 +221,19 @@ function setMedia(list) {
 }
 
 // ===== Acercamiento a un planeta =====
-let pt = 0, cam0 = 100, foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0;
+let pt = 0, cam0 = 100, foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0, heartX = 0, heartY = 0, heartK = 0, doneT = 0;
+const HEART = { isHeart: true }; // objeto especial: se activa cuando ya se tocaron todos los planetas y estrellas
+const HEART_ZOOM = 27; // qué tan cerca queda la cámara del corazón al entrar (menor = más cerca)
+let collapsing = false, collapseStart = 0; // colapso final: al tocar el corazón, todo el universo se comprime hacia él
+const COLLAPSE_DUR = 5200; // duración del colapso final en ms
 const back = document.getElementById('back');
 const TAPPABLE = PLANETS.concat(MSTARS); // todo lo que responde al toque
 let unlocked = 1; // cronología: cuántos planetas están desbloqueados (1 = solo el primero)
 PLANETS.forEach(p => p.la = p.n <= unlocked ? 1 : 0); // p.la: 0 = bloqueado, 1 = desbloqueado (se anima)
-const ppos = (p, now) => { const a = pt / 1000 * p.speed * .6 + p.ph; return [Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r]; };
+const DISK_W = .16 * .6; // velocidad de giro del disco completo (galaxia + corazón + planetas)
+const ppos = (p, now) => { const a = pt / 1000 * DISK_W + p.ph; return [Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r]; };
+const oval = (p, a) => [Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r];
+const spin = (x, z, ang) => { const c = Math.cos(ang), s2 = Math.sin(ang); return [x * c + z * s2, -x * s2 + z * c]; };
 function focusOn(p) {
   from = fpos.slice(); sw = 0; foc = p; curStar = null; seen.add(p.name);
   if (p.n === unlocked && unlocked < PLANETS.length) unlocked++;
@@ -240,6 +247,14 @@ function unfocus() {
   card.classList.remove('on'); stopMedia(); back.style.display = 'none'; hint.style.opacity = .7;
 }
 back.addEventListener('click', unfocus);
+function triggerCollapse() {
+  if (collapsing) return;
+  collapsing = true; collapseStart = performance.now();
+  from = fpos.slice(); sw = 0; foc = HEART; curStar = null; clearTimeout(cardTimer);
+  card.classList.remove('on'); stopMedia();
+  back.style.display = 'none'; hint.style.opacity = 0;
+  document.getElementById('skip').style.display = 'none';
+}
 let curStar = null;
 function closeCard() { card.classList.remove('on'); stopMedia(); curStar = null; if (!foc) hint.style.opacity = .7; }
 function showStar(s) {
@@ -251,6 +266,7 @@ function showStar(s) {
 }
 function hit(px, py) {
   if ((performance.now() - t0) / 1000 < INTRO) return;
+  if (collapsing) return;
   let best = null, bd = 1e9, lockedHit = false;
   for (const p of TAPPABLE) {
     if (!(p.sk > 0) || cam0 + p.sz < 2) continue;
@@ -258,7 +274,14 @@ function hit(px, py) {
     if (p.n > unlocked) { lockedHit = true; continue; }
     const sc = d / hr + p.sz / 400; if (sc < bd) { bd = sc; best = p; }
   }
-  if (!best) { if (!lockedHit) { unfocus(); closeCard(); } return; }
+  if (!best) {
+    if (seen.size >= TAPPABLE.length && !foc) {
+      const d = Math.hypot(px - heartX, py - heartY);
+      if (heartK > 0 && d < Math.max(heartK * 13, 40 * DPR)) return triggerCollapse();
+    }
+    if (!lockedHit) { unfocus(); closeCard(); }
+    return;
+  }
   if (best.isStar) return showStar(best);
   if (best === foc) { clearTimeout(cardTimer); card.classList.toggle('on'); if (!card.classList.contains('on')) stopMedia(); } else focusOn(best);
 }
@@ -282,43 +305,49 @@ function frame(now) {
   // Galaxia
   if (ti < 1) { rx = .04 + (H > W ? .3 : .2) * e; ry += .0015; } else if (!drag) { vx *= .95; vy += (.003 - vy) * .02; rx = Math.min(1.5, Math.max(-.2, rx + vx)); ry += vy; }
   const dt = Math.min(.05, Math.max(0, (now - lastNow) / 1000)); lastNow = now;
+  const colRaw = collapsing ? Math.min(1, (now - collapseStart) / COLLAPSE_DUR) : 0, colE = ease(colRaw);
+  const fadeOther = 1 - colE, shrinkOther = fadeOther, growHeart = 1 + colE * 7; // todo lo demás se comprime y se desvanece; el corazón crece
   if (!drag) pt += dt * 1000; // los planetas se detienen mientras giras la cámara
   for (const p of PLANETS) p.la += ((p.n <= unlocked ? 1 : 0) - p.la) * Math.min(1, dt * 3);
   sw = Math.min(1, sw + dt / 1.3);
-  { const s = sm(sw), tp = foc ? ppos(foc, now) : [0, 0, 0]; for (let i = 0; i < 3; i++) fpos[i] = from[i] * (1 - s) + tp[i] * s; }
+  { const s = sm(sw), tp = foc ? (foc.isHeart ? [0, HY, 0] : ppos(foc, now)) : [0, 0, 0]; for (let i = 0; i < 3; i++) fpos[i] = from[i] * (1 - s) + tp[i] * s; }
   { const tgt = foc ? 1 : 0; fzL += Math.sign(tgt - fzL) * Math.min(Math.abs(tgt - fzL), dt / 1.3); }
-  const fz = sm(fzL); if (foc) nearD += (foc.size * 4.5 - nearD) * Math.min(1, dt * 6);
+  const fz = sm(fzL); if (foc) nearD += ((foc.isHeart ? HEART_ZOOM : foc.size * 4.5) - nearD) * Math.min(1, dt * 6);
+  const heartReady = seen.size >= TAPPABLE.length; doneT += ((heartReady ? 1 : 0) - doneT) * Math.min(1, dt * 2); // se vuelve 1 al tocar todo
   const galA = sm(Math.max(0, (ti - .3) / .5)), cam = (900 * (1 - e) + 122 * e) * (1 - fz) + nearD * fz; cam0 = cam;
   const f = m * .9 * (zoom * (1 - fz) + fz);
   const cy = Math.cos(ry), sy = Math.sin(ry), cX = Math.cos(rx), sX = Math.sin(rx);
-  const beat = 1 + Math.sin(now / 420) * .035;
-  const proj = (x, y, z) => { x -= fpos[0]; y -= fpos[1]; z -= fpos[2]; const X = x * cy + z * sy, Z0 = -x * sy + z * cy, Y = y * cX - Z0 * sX, Z = y * sX + Z0 * cX, D = cam + Z, k = D < .5 ? 0 : f / D; return [cx0 + X * k, cy0 - Y * k, k, Z]; };
-  const dot = (o, sc, a, glow) => {
-    const [px, py, k] = proj(o.x * sc, o.y * sc, o.z * sc); if (k <= 0) return;
-    const tw = .6 + .4 * Math.sin(now / 500 + o.tw), d = Math.min(7 * DPR, Math.max(DPR * .8, o.s * k * .55 * (glow ? 1.3 : 1)));
-    ctx.globalAlpha = a * tw * galA; ctx.fillStyle = `hsl(${o.hue},100%,${o.l}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
+  const beat = 1 + Math.sin(now / (420 - 190 * doneT)) * (.035 + .085 * doneT);
+  const proj = (x, y, z, shrink) => { x -= fpos[0]; y -= fpos[1]; z -= fpos[2]; if (shrink !== undefined) { x *= shrink; y *= shrink; z *= shrink; } const X = x * cy + z * sy, Z0 = -x * sy + z * cy, Y = y * cX - Z0 * sX, Z = y * sX + Z0 * cX, D = cam + Z, k = D < .5 ? 0 : f / D; return [cx0 + X * k, cy0 - Y * k, k, Z]; };
+  const diskAng = pt / 1000 * DISK_W;
+  const dot = (o, sc, a, glow, shrink) => {
+    const [rx2, rz2] = spin(o.x * sc, o.z * sc, diskAng);
+    const [px, py, k] = proj(rx2, o.y * sc, rz2, shrink); if (k <= 0) return;
+    const tw = .6 + .4 * Math.sin(now / 500 + o.tw), grow = shrink !== undefined && shrink > 1 ? Math.sqrt(shrink) : 1;
+    const d = Math.min(7 * DPR * grow, Math.max(DPR * .8, o.s * k * .55 * (glow ? 1.3 : 1) * grow));
+    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${o.hue},100%,${o.l}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
   };
   // ===== Fondo 3D: nebulosas, estrellas y flores en el espacio =====
   for (const n of NEB) {
-    const q = proj(n.x + Math.sin(now / 9000 + n.p) * 8, n.y, n.z + Math.cos(now / 11000 + n.p) * 8); if (q[2] <= 0 || cam + q[3] < 10) continue;
-    const r = Math.min(n.r * q[2], m * 1.4), a = .42 * nA * Math.min(1, (cam + q[3]) / (n.r * .8));
+    const q = proj(n.x + Math.sin(now / 9000 + n.p) * 8, n.y, n.z + Math.cos(now / 11000 + n.p) * 8, shrinkOther); if (q[2] <= 0 || cam + q[3] < 10) continue;
+    const r = Math.min(n.r * q[2], m * 1.4), a = .42 * nA * Math.min(1, (cam + q[3]) / (n.r * .8)) * fadeOther;
     const g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], r);
     g.addColorStop(0, `hsla(${n.h},90%,45%,${a})`); g.addColorStop(1, `hsla(${n.h},90%,45%,0)`);
     ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(q[0] - r, q[1] - r, r * 2, r * 2);
   }
   for (const s of ST) {
-    const wz = ((s.z + now * s.v + s.R) % (2 * s.R)) - s.R, q = proj(s.x, s.y, wz); if (q[2] <= 0 || cam + q[3] < 3) continue;
+    const wz = ((s.z + now * s.v + s.R) % (2 * s.R)) - s.R, q = proj(s.x, s.y, wz, shrinkOther); if (q[2] <= 0 || cam + q[3] < 3) continue;
     const tw = .5 + .5 * Math.sin(now / 800 + s.tw), d = Math.min(6 * DPR, Math.max(DPR * .8, s.b * q[2]));
-    ctx.globalAlpha = fin * (1 - Math.pow(Math.abs(wz) / s.R, 4)) * (.4 + .6 * tw) * (s.big ? .55 : .9);
+    ctx.globalAlpha = fin * (1 - Math.pow(Math.abs(wz) / s.R, 4)) * (.4 + .6 * tw) * (s.big ? .55 : .9) * fadeOther;
     ctx.fillStyle = s.big ? '#a9d4ff' : '#e6f3ff'; ctx.fillRect(q[0] - d / 2, q[1] - d / 2, d, d);
   }
   for (const f of FL) {
-    const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2500 + f.ph) * 3, f.z); if (q[2] <= 0 || cam + q[3] < 6) continue;
-    flower(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 5000 * (f.ph - 3), .85 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)));
+    const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2500 + f.ph) * 3, f.z, shrinkOther); if (q[2] <= 0 || cam + q[3] < 6) continue;
+    flower(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 5000 * (f.ph - 3), .85 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)) * fadeOther);
   }
   for (const f of FY) {
-    const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2800 + f.ph) * 3, f.z); if (q[2] <= 0 || cam + q[3] < 6) continue;
-    daisy(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 6000 * (f.ph - 3), .9 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)));
+    const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2800 + f.ph) * 3, f.z, shrinkOther); if (q[2] <= 0 || cam + q[3] < 6) continue;
+    daisy(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 6000 * (f.ph - 3), .9 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)) * fadeOther);
   }
   // ===== Lluvia de estrellas =====
   if (ti >= 1) {
@@ -337,58 +366,60 @@ function frame(now) {
   }
   for (let i = M.length - 1; i >= 0; i--) {
     const m = M[i], age = now - m.s; if (age < 0) continue; if (age > m.life) { M.splice(i, 1); continue; }
-    const u = age / 1000, tu = Math.max(0, u - .25), q1 = proj(m.x + m.vx * u, m.y + m.vy * u, m.z + m.vz * u), q0 = proj(m.x + m.vx * tu, m.y + m.vy * tu, m.z + m.vz * tu);
+    const u = age / 1000, tu = Math.max(0, u - .25), q1 = proj(m.x + m.vx * u, m.y + m.vy * u, m.z + m.vz * u, shrinkOther), q0 = proj(m.x + m.vx * tu, m.y + m.vy * tu, m.z + m.vz * tu, shrinkOther);
     if (q1[2] <= 0 || q0[2] <= 0) continue;
-    const a = Math.sin(Math.PI * age / m.life), g = ctx.createLinearGradient(q0[0], q0[1], q1[0], q1[1]);
+    const a = Math.sin(Math.PI * age / m.life) * fadeOther, g = ctx.createLinearGradient(q0[0], q0[1], q1[0], q1[1]);
     g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(1, `rgba(235,250,255,${a})`);
     ctx.globalAlpha = 1; ctx.strokeStyle = g; ctx.lineWidth = 1.8 * DPR; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke();
     ctx.globalAlpha = a; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(q1[0], q1[1], 1.8 * DPR, 0, 6.283); ctx.fill();
   }
-  for (const o of G) dot(o, 1, .75, false);
-  for (const o of Hh) dot(o, beat, .95, true);
+  for (const o of G) dot(o, 1, .75, false, shrinkOther);
+  for (const o of Hh) dot(o, beat, .95, true, growHeart);
 
-  { const [ox, oy, ok] = proj(0, 0, 0), sq = .16 + sX * .9;
+  { const [ox, oy, ok] = proj(0, 0, 0, shrinkOther), sq = .16 + sX * .9;
     for (const [rr, w] of [[ok * 26 * GS, 1.8], [ok * 9 * GS, 1.3]]) {
       ctx.save(); ctx.translate(ox, oy); ctx.scale(w, sq);
       const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, rr); cg.addColorStop(0, 'rgba(255,255,255,1)'); cg.addColorStop(.2, 'rgba(210,248,255,.85)'); cg.addColorStop(.5, 'rgba(90,220,255,.4)'); cg.addColorStop(1, 'rgba(20,90,255,0)');
-      ctx.globalAlpha = galA; ctx.fillStyle = cg; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore(); } }
-  // Resplandor del corazón
-  const [hx, hy, hk] = proj(0, HY, 0), gr = hk * 12;
+      ctx.globalAlpha = galA * fadeOther; ctx.fillStyle = cg; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore(); } }
+  // Resplandor del corazón (crece y se torna más cálido al completar la cronología, y se expande al colapsar el universo)
+  const [hx, hy, hk] = proj(0, HY, 0), gr = hk * (12 + 5 * doneT) * (1 + colE * 14);
+  heartX = hx; heartY = hy; heartK = hk;
   const gl = ctx.createRadialGradient(hx, hy, 0, hx, hy, gr);
-  gl.addColorStop(0, 'rgba(120,220,255,.28)'); gl.addColorStop(1, 'rgba(20,80,255,0)');
+  gl.addColorStop(0, `rgba(${120 + 90 * doneT},${220 - 10 * doneT},${255 - 120 * doneT},${.28 + .24 * doneT})`); gl.addColorStop(1, 'rgba(20,80,255,0)');
   ctx.globalAlpha = galA; ctx.fillStyle = gl; ctx.fillRect(hx - gr, hy - gr, gr * 2, gr * 2);
+  if (heartReady && !(foc && foc.isHeart)) { const pu = (now / 1400) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA; ctx.strokeStyle = 'rgba(255,224,170,.95)'; ctx.lineWidth = 1.6 * DPR; ctx.beginPath(); ctx.arc(hx, hy, gr * (1.15 + pu * .85), 0, 6.283); ctx.stroke(); }
 
   // Estrellas con mensaje (tocables): destello dorado con un anillo suave hasta que se abren por primera vez
   for (const s of MSTARS) {
-    const q = proj(s.x, s.y + Math.sin(now / 1700 + s.ph) * .9, s.z); s.sx = q[0]; s.sy = q[1]; s.sk = q[2]; s.sz = q[3]; s.sr = s.size * q[2];
+    const q = proj(s.x, s.y + Math.sin(now / 1700 + s.ph) * .9, s.z, shrinkOther); s.sx = q[0]; s.sy = q[1]; s.sk = q[2]; s.sz = q[3]; s.sr = s.size * q[2];
     if (q[2] <= 0 || cam + q[3] < 2 || galA <= 0) continue;
     s.v = (s.v || 0) + ((seen.has(s.key) ? 1 : 0) - (s.v || 0)) * Math.min(1, dt * 4); // 0 = sin abrir (morada), 1 = ya abierta (dorada)
     const h = -85 + (s.hue + 85) * s.v; // de morado (-85 ≡ 275) a s.hue (dorado por defecto), pasando por rosa y naranja
-    const u = Math.min(s.sr, 10 * DPR), a = galA * (.8 + .2 * Math.sin(now / 550 + s.ph * 3));
+    const u = Math.min(s.sr, 10 * DPR), a = galA * (.8 + .2 * Math.sin(now / 550 + s.ph * 3)) * fadeOther;
     const gl = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], u * 5);
     gl.addColorStop(0, `hsla(${h},100%,${72 + 8 * s.v}%,.55)`); gl.addColorStop(1, `hsla(${h},100%,60%,0)`);
     ctx.globalAlpha = a; ctx.fillStyle = gl; ctx.fillRect(q[0] - u * 5, q[1] - u * 5, u * 10, u * 10);
     ctx.fillStyle = `hsl(${h},100%,${78 + 14 * s.v}%)`;
     for (const [L, rot] of [[u * 3.6, 0], [u * 2.1, .785]]) { ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(rot); ctx.beginPath(); ctx.moveTo(0, -L); ctx.quadraticCurveTo(0, 0, L, 0); ctx.quadraticCurveTo(0, 0, 0, L); ctx.quadraticCurveTo(0, 0, -L, 0); ctx.quadraticCurveTo(0, 0, 0, -L); ctx.fill(); ctx.restore(); }
     ctx.beginPath(); ctx.arc(q[0], q[1], u * .5, 0, 6.283); ctx.fill();
-    if (!seen.has(s.key)) { const pu = (now / 1500 + s.ph) % 1; ctx.globalAlpha = (1 - pu) * .45 * galA; ctx.strokeStyle = `hsl(${h},100%,80%)`; ctx.lineWidth = 1.3 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], u * (1.6 + pu * 2.4), 0, 6.283); ctx.stroke(); }
+    if (!seen.has(s.key)) { const pu = (now / 1500 + s.ph) % 1; ctx.globalAlpha = (1 - pu) * .45 * galA * fadeOther; ctx.strokeStyle = `hsl(${h},100%,80%)`; ctx.lineWidth = 1.3 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], u * (1.6 + pu * 2.4), 0, 6.283); ctx.stroke(); }
   }
 
   // Planetas (ordenados por profundidad)
   ctx.globalCompositeOperation = 'source-over';
-  const list = PLANETS.map(p => { const q = proj(...ppos(p, now)); p.sx = q[0]; p.sy = q[1]; p.sr = p.size * q[2]; p.sk = q[2]; p.sz = q[3]; return { p, q }; }).sort((a, b) => b.q[3] - a.q[3]);
+  const list = PLANETS.map(p => { const q = proj(...ppos(p, now), shrinkOther); p.sx = q[0]; p.sy = q[1]; p.sr = p.size * q[2]; p.sk = q[2]; p.sz = q[3]; return { p, q }; }).sort((a, b) => b.q[3] - a.q[3]);
   for (const { p, q } of list) {
-    const r = p.sr; if (r <= 0 || q[2] <= 0 || cam + q[3] < 2) continue;
+    const r = p.sr; if (r <= 0 || q[2] <= 0 || cam + q[3] < 2 || fadeOther <= 0) continue;
     // órbita tenue
-    ctx.globalAlpha = .12 * galA * (1 - fz * .8); ctx.strokeStyle = '#6ab7ff'; ctx.lineWidth = DPR; ctx.beginPath();
+    ctx.globalAlpha = .12 * galA * (1 - fz * .8) * fadeOther; ctx.strokeStyle = '#6ab7ff'; ctx.lineWidth = DPR; ctx.beginPath();
     let pen = false;
-    for (let i = 0; i <= 64; i++) { const a = i / 64 * 6.283, o = proj(Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r); if (cam + o[3] < 2) { pen = false; continue; } pen ? ctx.lineTo(o[0], o[1]) : ctx.moveTo(o[0], o[1]); pen = true; } ctx.stroke();
-    ctx.globalAlpha = galA * (.3 + .7 * p.la);
+    for (let i = 0; i <= 64; i++) { const a = i / 64 * 6.283, o = proj(Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r, shrinkOther); if (cam + o[3] < 2) { pen = false; continue; } pen ? ctx.lineTo(o[0], o[1]) : ctx.moveTo(o[0], o[1]); pen = true; } ctx.stroke();
+    ctx.globalAlpha = galA * (.3 + .7 * p.la) * fadeOther;
     const g = ctx.createRadialGradient(q[0] - r * .35, q[1] - r * .35, r * .1, q[0], q[1], r * 1.05);
     g.addColorStop(0, `hsl(${p.hue},100%,85%)`); g.addColorStop(.6, `hsl(${p.hue},85%,45%)`); g.addColorStop(1, `hsl(${p.hue + 15},90%,15%)`);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 6.283); ctx.fill();
-    if (p.n <= unlocked && !seen.has(p.name)) { const pu = (now / 1200) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA * p.la; ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.5 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], r * (1.4 + pu * 1.2), 0, 6.283); ctx.stroke(); }
-    if (ti >= 1 && p.la > .02 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85 * p.la; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(11, Math.min(14, m / DPR / 30)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.n + ' · ' + p.name, q[0], q[1] + r + 15 * DPR); }
+    if (p.n <= unlocked && !seen.has(p.name)) { const pu = (now / 1200) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA * p.la * fadeOther; ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.5 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], r * (1.4 + pu * 1.2), 0, 6.283); ctx.stroke(); }
+    if (ti >= 1 && p.la > .02 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85 * p.la * fadeOther; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(11, Math.min(14, m / DPR / 30)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.n + ' · ' + p.name, q[0], q[1] + r + 15 * DPR); }
   }
   ctx.globalAlpha = 1;
   requestAnimationFrame(frame);
