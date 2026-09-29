@@ -260,14 +260,14 @@ function unfocus() {
   card.classList.remove('on'); stopMedia(); back.style.display = 'none'; hint.style.opacity = .7;
 }
 back.addEventListener('click', unfocus);
-// ===== Estado final: mantener presionado 2.5 s => el universo nace de nuevo =====
+// ===== Estado final: mantener presionado 1.5 s => el universo nace de nuevo =====
 const isFinal = () => collapsing && performance.now() - collapseStart >= COLLAPSE_DUR;
 const rbEl = document.getElementById('rb'), flashEl = document.getElementById('flash');
 let holdT = 0, holdStart = 0, hp = 0, exploding = false, exStart = 0;
 function startHold(e) {
   if (!isFinal() || exploding || e.isPrimary === false) return;
   holdStart = performance.now();
-  clearTimeout(holdT); holdT = setTimeout(() => { holdT = 0; explode(); }, 2500);
+  clearTimeout(holdT); holdT = setTimeout(() => { holdT = 0; explode(); }, 1500);
 }
 function cancelHold() { clearTimeout(holdT); holdT = 0; }
 const BURST_MS = 1300, BIRTH_DUR = 3400; let birthStart = -1e9;
@@ -357,7 +357,7 @@ function frame(now) {
   const galA = sm(Math.max(0, (ti - .3) / .5)), cam = (900 * (1 - e) + 122 * e) * (1 - fz) + nearD * fz; cam0 = cam;
   const f = m * .9 * (zoom * (1 - fz) + fz);
   const cy = Math.cos(ry), sy = Math.sin(ry), cX = Math.cos(rx), sX = Math.sin(rx);
-  hp = holdT ? Math.min(1, (now - holdStart) / 2500) : hp * (1 - Math.min(1, dt * 4)); const exE = exploding ? Math.min(1, (now - exStart) / BURST_MS) : 0;
+  hp = holdT ? Math.min(1, (now - holdStart) / 1500) : hp * (1 - Math.min(1, dt * 4)); const exE = exploding ? Math.min(1, (now - exStart) / BURST_MS) : 0;
   const finalBeatMs = 60000 / (SONG_BPM || FINAL_BPM), beatT = (420 - 190 * doneT) * (1 - colE2) + finalBeatMs * colE2;
   const prevPhase = heartPhase; heartPhase += dt * 1000 / beatT;
   const beat = 1 + Math.sin(heartPhase) * (.035 + .085 * doneT + .04 * colE2);
@@ -370,10 +370,11 @@ function frame(now) {
     const [px, py, k] = proj(rx2, o.y * sc, rz2, shrink); if (k <= 0) return;
     const tw = .6 + .4 * Math.sin(now / 500 + o.tw), grow = shrink !== undefined && shrink > 1 ? Math.sqrt(shrink) : 1;
     const d = Math.min(7 * DPR * grow, Math.max(DPR * .8, o.s * k * .55 * (glow ? 1.3 : 1) * grow));
-    const hue = hueMix ? o.hue + (352 - o.hue) * hueMix : o.hue;
+    const hue = hueMix ? o.hue + (205 - o.hue) * hueMix : o.hue;
     ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${hue},100%,${o.l}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
   };
   // ===== Fondo 3D: nebulosas, estrellas y flores en el espacio =====
+  if (fadeOther > .003) {
   for (const n of NEB) {
     const q = proj(n.x + Math.sin(now / 9000 + n.p) * 8, n.y, n.z + Math.cos(now / 11000 + n.p) * 8, shrinkOther); if (q[2] <= 0 || cam + q[3] < 10) continue;
     const r = Math.min(n.r * q[2], m * 1.4), a = .42 * nA * Math.min(1, (cam + q[3]) / (n.r * .8)) * fadeOther;
@@ -395,8 +396,9 @@ function frame(now) {
     const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2800 + f.ph) * 3, f.z, shrinkOther); if (q[2] <= 0 || cam + q[3] < 6) continue;
     daisy(q[0], q[1], Math.min(f.r * q[2], 110 * DPR), f.rot + now / 6000 * (f.ph - 3), .9 * fin * (1 - Math.pow(Math.abs(wx) / 300, 4)) * fadeOther);
   }
+  }
   // ===== Lluvia de estrellas =====
-  if (ti >= 1) {
+  if (ti >= 1 && fadeOther > .003) {
     if (!nextSh) nextSh = now + 2500;
     if (now > nextSh) {
       nextSh = now + 12000 + Math.random() * 10000;
@@ -410,7 +412,7 @@ function frame(now) {
       }
     }
   }
-  for (let i = M.length - 1; i >= 0; i--) {
+  if (fadeOther > .003) for (let i = M.length - 1; i >= 0; i--) {
     const m = M[i], age = now - m.s; if (age < 0) continue; if (age > m.life) { M.splice(i, 1); continue; }
     const u = age / 1000, tu = Math.max(0, u - .25), q1 = proj(m.x + m.vx * u, m.y + m.vy * u, m.z + m.vz * u, shrinkOther), q0 = proj(m.x + m.vx * tu, m.y + m.vy * tu, m.z + m.vz * tu, shrinkOther);
     if (q1[2] <= 0 || q0[2] <= 0) continue;
@@ -419,7 +421,7 @@ function frame(now) {
     ctx.globalAlpha = 1; ctx.strokeStyle = g; ctx.lineWidth = 1.8 * DPR; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(q0[0], q0[1]); ctx.lineTo(q1[0], q1[1]); ctx.stroke();
     ctx.globalAlpha = a; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(q1[0], q1[1], 1.8 * DPR, 0, 6.283); ctx.fill();
   }
-  for (const o of G) dot(o, 1, .75, false, shrinkOther);
+  if (fadeOther > .003) for (const o of G) dot(o, 1, .75, false, shrinkOther);
   { const hb = beat * (1 + hp * .1 * Math.sin(now / 45)), ee = 1 - Math.pow(1 - exE, 3), tmp = {}, aH = .95 * heartIn * (1 - exE * exE);
     for (const o of Hh) {
       if (exE > 0) { tmp.x = o.x + o.ex * ee * 70; tmp.y = o.y + o.ey * ee * 70; tmp.z = o.z + o.ez * ee * 70; tmp.hue = o.hue; tmp.l = o.l; tmp.s = o.s * (1 + exE); tmp.tw = o.tw; dot(tmp, hb, aH, true, growHeart, doneT); }
@@ -436,13 +438,13 @@ function frame(now) {
   const [hx, hy, hk] = proj(0, HY, 0), gr = hk * (12 + 5 * doneT) * (1 + colE2 * 4);
   heartX = hx; heartY = hy; heartK = hk;
   const gl = ctx.createRadialGradient(hx, hy, 0, hx, hy, gr);
-  gl.addColorStop(0, `rgba(${120 + 130 * doneT},${220 - 160 * doneT},${255 - 235 * doneT},${.28 + .24 * doneT})`); gl.addColorStop(1, 'rgba(20,80,255,0)');
+  gl.addColorStop(0, `rgba(${120 - 60 * doneT},${220 + 20 * doneT},255,${.28 + .3 * doneT})`); gl.addColorStop(1, 'rgba(20,80,255,0)');
   ctx.globalAlpha = galA; ctx.fillStyle = gl; ctx.fillRect(hx - gr, hy - gr, gr * 2, gr * 2);
   if (hp > .01 || exE > 0) {
     const g2 = gr * (1 + hp * 2.4 + exE * 14), gg = ctx.createRadialGradient(hx, hy, 0, hx, hy, g2), a2 = Math.max(hp * .9, exE) * (1 - exE * .4);
-    gg.addColorStop(0, `rgba(255,245,240,${a2})`); gg.addColorStop(.3, `rgba(255,90,120,${a2 * .6})`); gg.addColorStop(1, 'rgba(255,40,80,0)');
+    gg.addColorStop(0, `rgba(235,248,255,${a2})`); gg.addColorStop(.3, `rgba(90,170,255,${a2 * .6})`); gg.addColorStop(1, 'rgba(30,80,255,0)');
     ctx.globalAlpha = galA; ctx.fillStyle = gg; ctx.fillRect(hx - g2, hy - g2, g2 * 2, g2 * 2);
-    if (exE > 0) { ctx.globalAlpha = (1 - exE) * galA; ctx.strokeStyle = 'rgba(255,220,225,.95)'; ctx.lineWidth = 3 * DPR; ctx.beginPath(); ctx.arc(hx, hy, exE * m * .8, 0, 6.283); ctx.stroke(); }
+    if (exE > 0) { ctx.globalAlpha = (1 - exE) * galA; ctx.strokeStyle = 'rgba(200,235,255,.95)'; ctx.lineWidth = 3 * DPR; ctx.beginPath(); ctx.arc(hx, hy, exE * m * .8, 0, 6.283); ctx.stroke(); }
   }
   if (heartReady && !(foc && foc.isHeart)) { const pu = (now / 1400) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA; ctx.strokeStyle = 'rgba(255,224,170,.95)'; ctx.lineWidth = 1.6 * DPR; ctx.beginPath(); ctx.arc(hx, hy, gr * (1.15 + pu * .85), 0, 6.283); ctx.stroke(); }
 
