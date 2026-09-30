@@ -26,7 +26,7 @@
   @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
   #cm { display: none; gap: 8px; margin: 0 0 14px; overflow-x: auto; scroll-snap-type: x mandatory; }
   #cm img, #cm video { flex: 0 0 100%; width: 100%; max-height: 36vh; object-fit: contain; scroll-snap-align: center; border-radius: 10px; background: #020c22; }
-  #rb { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; color: #ffd0d8; opacity: 0; transition: opacity 1.5s; pointer-events: none; text-shadow: 0 0 10px #ff3a5a; }
+  #rb { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; color: #cfeaff; opacity: 0; transition: opacity 1.5s; pointer-events: none; text-shadow: 0 0 10px #3a9aff; }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity 2.2s ease-out; }
 </style>
 </head>
@@ -260,7 +260,7 @@ function unfocus() {
   card.classList.remove('on'); stopMedia(); back.style.display = 'none'; hint.style.opacity = .7;
 }
 back.addEventListener('click', unfocus);
-// ===== Estado final: mantener presionado 1.5 s => el universo nace de nuevo =====
+// ===== Estado final: mantener presionado 2.5 s => el universo nace de nuevo =====
 const isFinal = () => collapsing && performance.now() - collapseStart >= COLLAPSE_DUR;
 const rbEl = document.getElementById('rb'), flashEl = document.getElementById('flash');
 let holdT = 0, holdStart = 0, hp = 0, exploding = false, exStart = 0;
@@ -478,7 +478,7 @@ function frame(now) {
     g.addColorStop(0, `hsl(${p.hue},100%,85%)`); g.addColorStop(.6, `hsl(${p.hue},85%,45%)`); g.addColorStop(1, `hsl(${p.hue + 15},90%,15%)`);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 6.283); ctx.fill();
     if (p.n <= unlocked && !seen.has(p.name)) { const pu = (now / 1200) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA * p.la * fadeOther; ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.5 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], r * (1.4 + pu * 1.2), 0, 6.283); ctx.stroke(); }
-    if (ti >= 1 && p.la > .02 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85 * p.la * fadeOther; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(11, Math.min(14, m / DPR / 30)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.n + ' · ' + p.name, q[0], q[1] + r + 15 * DPR); }
+    if (ti >= 1 && p.la > .02 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85 * p.la * fadeOther; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(9, Math.min(30, p.sk * 1.7)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.n + ' · ' + p.name, q[0], q[1] + r + 15 * DPR); }
   }
   ctx.globalAlpha = 1;
   requestAnimationFrame(frame);
