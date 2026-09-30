@@ -14,7 +14,11 @@
   #skip { position: fixed; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); background: none; border: 1px solid #4aa3ff88; color: #9fd0ff; border-radius: 20px; padding: 6px 14px; font: 13px Georgia, serif; cursor: pointer; }
   #card { max-height: 72vh; overflow-y: auto; position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px) scale(.95); width: min(86vw, 380px); box-sizing: border-box; padding: 20px 24px; border-radius: 16px; background: rgba(4, 22, 60, .92); border: 1px solid #4aa3ff99; box-shadow: 0 0 40px #1a6cff66; opacity: 0; pointer-events: none; transition: .4s; text-align: center; }
   #card.on { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
-  #back { display: none; position: fixed; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); background: none; border: 1px solid #4aa3ff88; color: #9fd0ff; border-radius: 20px; padding: 6px 14px; font: 13px Georgia, serif; cursor: pointer; }
+  #card { scrollbar-width: thin; scrollbar-color: #4aa3ff55 transparent; } /* Firefox */
+  #card::-webkit-scrollbar { width: 6px; } /* Chrome / Safari */
+  #card::-webkit-scrollbar-track { background: transparent; }
+  #card::-webkit-scrollbar-thumb { background: #4aa3ff55; border-radius: 3px; }
+  #card::-webkit-scrollbar-thumb:hover { background: #6ab7ff88; }
   #card h2 { margin: 0 0 8px; font-weight: normal; letter-spacing: .06em; color: #8fd0ff; }
   #card p { margin: 0 0 14px; line-height: 1.5; }
   #card small { opacity: .5; }
@@ -32,13 +36,12 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="start"><h1>Galaxia Corazón</h1><p>♪ Toca para comenzar</p></div>
+<div id="start"><h1>Nuestro Universo</h1><p> Toca para comenzar</p></div>
 <div id="cap"></div>
 <div id="rb">Mantén presionado el corazón para que el universo nazca de nuevo</div>
 <div id="flash"></div>
 <div id="hint">Arrastra para girar · toca el planeta que brilla o una estrella · pellizca para acercar</div>
 <button id="skip">Saltar</button>
-<button id="back">← Alejar</button>
 <div id="mhint">♪ Toca la pantalla para activar la música</div>
 <div id="card"><h2 id="ct"></h2><div id="cm"></div><p id="cp"></p><small>toca para cerrar</small></div>
 <script>
@@ -46,7 +49,7 @@
 // Para añadir foto o video a la tarjeta, agrega  media: "fotos/mi-foto.jpg"  (ruta RELATIVA a este index.html)
 // o varias:  media: ["fotos/a.jpg", "videos/b.mp4"]  (se deslizan de lado). Formatos: jpg, png, gif, webp, mp4, webm.
 const PLANETS = [ // en orden cronológico: el 1 es el más cercano al corazón y el 10 el más lejano
-  { name: "Nuestro primer encuentro", text: "Aquí cuenta cómo y dónde se conocieron.", r: 22, size: 2.2, hue: 195, speed: 0.16, ph: 0.0 },
+  { name: "Nuestro primer encuentro", text: "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus", r: 22, size: 2.2, hue: 195, speed: 0.16, ph: 0.0 },
   { name: "Problemas", text: "Aquí escribe las dificultades que enfrentaron y lo que aprendieron.", r: 26, size: 2.6, hue: 210, speed: 0.16, ph: 2.4 },
   { name: "Amor por primera vez", text: "Aquí escribe cuándo sintieron por primera vez que era amor.", r: 30, size: 2.0, hue: 200, speed: 0.16, ph: 4.8 },
   { name: "Nuestras diferencias", text: "Aquí escribe en qué se distinguen y cómo se complementan.", r: 34, size: 2.8, hue: 255, speed: 0.16, ph: 7.2 },
@@ -239,7 +242,6 @@ const FINAL_BPM = 70; // pulso del corazón al final, en beats por minuto, cuand
 const SONG_BPM = null; // si cargas tu propia canción y quieres que el latido vaya a SU ritmo, pon aquí su BPM (ej. 120). El primer beat de tu canción debe caer justo al iniciarla (segundo 0). // qué tan cerca queda la cámara del corazón al entrar (menor = más cerca)
 let collapsing = false, collapseStart = 0; // colapso final: al tocar el corazón, todo el universo se comprime hacia él
 const COLLAPSE_DUR = 6200; // duración del colapso final en ms
-const back = document.getElementById('back');
 const TAPPABLE = PLANETS.concat(MSTARS); // todo lo que responde al toque
 let unlocked = 1; // cronología: cuántos planetas están desbloqueados (1 = solo el primero)
 PLANETS.forEach(p => p.la = p.n <= unlocked ? 1 : 0); // p.la: 0 = bloqueado, 1 = desbloqueado (se anima)
@@ -252,14 +254,13 @@ function focusOn(p) {
   if (p.n === unlocked && unlocked < PLANETS.length) unlocked++;
   document.getElementById('ct').textContent = p.n + ' · ' + p.name; document.getElementById('cp').textContent = p.text; setMedia(p.media);
   card.classList.remove('on'); clearTimeout(cardTimer); cardTimer = setTimeout(() => card.classList.add('on'), 1100);
-  back.style.display = 'block'; hint.style.opacity = 0;
+  hint.style.opacity = 0;
 }
 function unfocus() {
   if (!foc) return;
   from = fpos.slice(); sw = 0; foc = null; clearTimeout(cardTimer);
-  card.classList.remove('on'); stopMedia(); back.style.display = 'none'; hint.style.opacity = .7;
+  card.classList.remove('on'); stopMedia(); hint.style.opacity = .7;
 }
-back.addEventListener('click', unfocus);
 // ===== Estado final: mantener presionado 2.5 s => el universo nace de nuevo =====
 const isFinal = () => collapsing && performance.now() - collapseStart >= COLLAPSE_DUR;
 const rbEl = document.getElementById('rb'), flashEl = document.getElementById('flash');
@@ -277,7 +278,7 @@ function rebirth() {
   collapsing = false; foc = null; from = fpos.slice(); sw = 0; curStar = null; exploding = false; hp = 0;
   seen.clear(); unlocked = 1; doneT = 0; heartPhase = 0; vx = 0; nextSh = 0; M.length = 0;
   PLANETS.forEach(p => p.la = p.n <= unlocked ? 1 : 0); MSTARS.forEach(s => s.v = 0);
-  card.classList.remove('on'); stopMedia(); back.style.display = 'none'; hint.style.opacity = 0; rbEl.style.opacity = 0;
+  card.classList.remove('on'); stopMedia(); hint.style.opacity = 0; rbEl.style.opacity = 0;
   capIdx = -1; t0 = performance.now() - INTRO * 1000; document.getElementById('skip').style.display = 'none';
   birthStart = performance.now();
 }
@@ -287,7 +288,7 @@ function triggerCollapse() {
   if (el && SONG_BPM) { try { el.currentTime = 0; el.play(); } catch (e) {} }
   from = fpos.slice(); sw = 0; foc = HEART; curStar = null; clearTimeout(cardTimer);
   card.classList.remove('on'); stopMedia();
-  back.style.display = 'none'; hint.style.opacity = 0;
+  hint.style.opacity = 0;
   document.getElementById('skip').style.display = 'none';
 }
 let curStar = null;
