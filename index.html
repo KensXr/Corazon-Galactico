@@ -12,14 +12,14 @@
   #cap { position: fixed; left: 0; right: 0; top: 42%; text-align: center; font-size: clamp(20px, 5vw, 34px); letter-spacing: .12em; text-shadow: 0 0 18px #2f9bff; opacity: 0; transition: opacity 1.2s; pointer-events: none; padding: 0 20px; }
   #hint { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; opacity: 0; transition: opacity 1.5s; pointer-events: none; }
   #skip { position: fixed; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); background: none; border: 1px solid #4aa3ff88; color: #9fd0ff; border-radius: 20px; padding: 6px 14px; font: 13px Georgia, serif; cursor: pointer; }
-  #card { max-height: 72vh; overflow-y: auto; position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px) scale(.95); width: min(86vw, 380px); box-sizing: border-box; padding: 20px 24px; border-radius: 16px; background: rgba(4, 22, 60, .92); border: 1px solid #4aa3ff99; box-shadow: 0 0 40px #1a6cff66; opacity: 0; pointer-events: none; transition: .4s; text-align: center; }
+  #card { --ah: 205; max-height: 72vh; overflow-y: auto; position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px) scale(.95); width: min(86vw, 380px); box-sizing: border-box; padding: 20px 24px; border-radius: 16px; background: rgba(4, 22, 60, .92); border: 1px solid hsla(var(--ah),90%,65%,.65); box-shadow: 0 0 40px hsla(var(--ah),90%,55%,.4); opacity: 0; pointer-events: none; transition: .4s; text-align: center; }
   #card.on { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
-  #card { scrollbar-width: thin; scrollbar-color: #4aa3ff55 transparent; } /* Firefox */
+  #card { scrollbar-width: thin; scrollbar-color: hsla(var(--ah),90%,65%,.55) transparent; } /* Firefox */
   #card::-webkit-scrollbar { width: 6px; } /* Chrome / Safari */
   #card::-webkit-scrollbar-track { background: transparent; }
-  #card::-webkit-scrollbar-thumb { background: #4aa3ff55; border-radius: 3px; }
-  #card::-webkit-scrollbar-thumb:hover { background: #6ab7ff88; }
-  #card h2 { margin: 0 0 8px; font-weight: normal; letter-spacing: .06em; color: #8fd0ff; }
+  #card::-webkit-scrollbar-thumb { background: hsla(var(--ah),90%,65%,.55); border-radius: 3px; }
+  #card::-webkit-scrollbar-thumb:hover { background: hsla(var(--ah),90%,70%,.85); }
+  #card h2 { margin: 0 0 8px; font-weight: normal; letter-spacing: .06em; color: hsl(var(--ah),85%,80%); }
   #card p { margin: 0 0 14px; line-height: 1.5; }
   #card small { opacity: .5; }
   #mhint { position: fixed; left: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); max-width: 55vw; font-size: 12px; letter-spacing: .06em; color: #9fd0ff; opacity: 0; transition: opacity 1s; pointer-events: none; }
@@ -30,7 +30,7 @@
   @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
   #cm { display: none; gap: 8px; margin: 0 0 14px; overflow-x: auto; scroll-snap-type: x mandatory; }
   #cm img, #cm video { flex: 0 0 100%; width: 100%; max-height: 36vh; object-fit: contain; scroll-snap-align: center; border-radius: 10px; background: #020c22; }
-  #rb { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; color: #cfeaff; opacity: 0; transition: opacity 1.5s; pointer-events: none; text-shadow: 0 0 10px #3a9aff; }
+  #rb { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; color: #e6e1d8; opacity: 0; transition: opacity 1.5s; pointer-events: none; text-shadow: 0 0 10px rgba(255,255,255,.3); }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity 2.2s ease-out; }
 </style>
 </head>
@@ -49,16 +49,16 @@
 // Para añadir foto o video a la tarjeta, agrega  media: "fotos/mi-foto.jpg"  (ruta RELATIVA a este index.html)
 // o varias:  media: ["fotos/a.jpg", "videos/b.mp4"]  (se deslizan de lado). Formatos: jpg, png, gif, webp, mp4, webm.
 const PLANETS = [ // en orden cronológico: el 1 es el más cercano al corazón y el 10 el más lejano
-  { name: "Nuestro primer encuentro", media:"fotos/pla1.jfif", text:"Aún recuerdo esa foto que creo que inició todo esto. Si no hubiese visto esa foto de tu ojito y no te la hubiera enviado, tal vez ni siquiera se nos habría dado la oportunidad de conocernos, toda esa etapa estuvo llena de nervios, vergüenza y timidez. Me hace gracia cómo éramos antes tan tímidos al hablarnos y cómo, cuándo salíamos, se notaba esa tensión entre nosotros. Aún recuerdo lo nervioso que me ponía el estar cerca de ti. No recuerdo exactamente cuándo fue nuestro primer beso, pero estoy agradecido de que hayas tomado la iniciativa. También me gustaba cómo aprovechábamos cualquier plan para salir y poder vernos.", r: 22, size: 2.2, hue: 195, speed: 0.16, ph: 0.0 },
-  { name: "Problemas", text: "Obviamente no todo fue amor al principio; pasamos por varias situaciones y decisiones. Creo que en esos momentos lo único que me mantenía fuerte eras tú. Tal vez tú aún no lo veías así en ese tiempo, pero al final logramos avanzar juntos a pesar de todos los problemas y de todas las cosas que podían decir que paráramos. No sé si ya te lo he dicho a ti, pero cada vez que pienso en las decisiones que tomé en ese entonces, siempre pienso lo mismo: si de alguna manera tuviera otra oportunidad, lo haría todo de nuevo.", r: 26, size: 2.6, hue: 210, speed: 0.16, ph: 2.4 },
-  { name: "Amor por primera vez", media:"fotos/pla3.jfif", text: "Hoy hace 2 años estábamos en tu casa un sábado por la noche, y ese día fue cuando por primera vez formalizamos nuestro amor. Tal vez no fue “especial” o bonito para ti, y lo entiendo. Seguro hubieras querido que fuese de una manera diferente, pero en mi defensa tengo que decir que yo ya lo estaba planeando y tú fuiste la desesperada, jsjsj. Aun así, te prometo que algún día te lo compensaré. Solo que ya conoces mi situación ahorita, pero créeme que algún día te lo compensaré. Sinceramente, no recuerdo qué hicimos en nuestro primer aniversario, entonces no tengo ningún recuerdito que poner aquí, jsjsj. Espero que este aniversario tengamos fotitos para guardar para el siguiente.", r: 30, size: 2.0, hue: 200, speed: 0.16, ph: 4.8 },
-  { name: "Nuestras diferencias", text: "Aquí escribe en qué se distinguen y cómo se complementan.", r: 34, size: 2.8, hue: 255, speed: 0.16, ph: 7.2 },
-  { name: "Tiempo juntos", text: "Aquí escribe los momentos que más disfrutan compartir.", r: 38, size: 2.3, hue: 190, speed: 0.16, ph: 9.6 },
-  { name: "Primer aniversario", text: "Aquí escribe cómo fue celebrar su primer año.", r: 42, size: 3.0, hue: 215, speed: 0.16, ph: 12.0 },
-  { name: "Navidad", text: "Aquí escribe el recuerdo de su Navidad juntos.", r: 46, size: 2.1, hue: 170, speed: 0.16, ph: 14.4 },
-  { name: "Amor y Amistad", text: "Aquí escribe lo que vivieron en su Amor y Amistad.", r: 50, size: 2.6, hue: 205, speed: 0.16, ph: 16.8 },
-  { name: "Más diferencias...", text: "Aquí escribe las nuevas diferencias y cómo las superaron.", r: 54, size: 2.4, hue: 265, speed: 0.16, ph: 19.2 },
-  { name: "Nuestro futuro", text: "Aquí escribe todo lo que sueñan construir juntos.", r: 58, size: 3.4, hue: 225, speed: 0.16, ph: 21.6 }
+  { name: "Nuestro primer encuentro", media:"fotos/pla1.jfif", text:"Aún recuerdo esa foto que creo que inició todo esto. Si no hubiese visto esa foto de tu ojito y no te la hubiera enviado, tal vez ni siquiera se nos habría dado la oportunidad de conocernos, toda esa etapa estuvo llena de nervios, vergüenza y timidez. Me hace gracia cómo éramos antes tan tímidos al hablarnos y cómo, cuándo salíamos, se notaba esa tensión entre nosotros. Aún recuerdo lo nervioso que me ponía el estar cerca de ti. No recuerdo exactamente cuándo fue nuestro primer beso, pero estoy agradecido de que hayas tomado la iniciativa. También me gustaba cómo aprovechábamos cualquier plan para salir y poder vernos.", r: 22, size: 2.2, hue: 338, speed: 0.16, ph: 0.0 },
+  { name: "Problemas", text: "Obviamente no todo fue amor al principio; pasamos por varias situaciones y decisiones. Creo que en esos momentos lo único que me mantenía fuerte eras tú. Tal vez tú aún no lo veías así en ese tiempo, pero al final logramos avanzar juntos a pesar de todos los problemas y de todas las cosas que podían decir que paráramos. No sé si ya te lo he dicho a ti, pero cada vez que pienso en las decisiones que tomé en ese entonces, siempre pienso lo mismo: si de alguna manera tuviera otra oportunidad, lo haría todo de nuevo.", r: 26, size: 2.6, hue: 228, speed: 0.16, ph: 2.4 },
+  { name: "Amor por primera vez", media:"fotos/pla3.jfif", text: "Hoy hace 2 años estábamos en tu casa un sábado por la noche, y ese día fue cuando por primera vez formalizamos nuestro amor. Tal vez no fue “especial” o bonito para ti, y lo entiendo. Seguro hubieras querido que fuese de una manera diferente, pero en mi defensa tengo que decir que yo ya lo estaba planeando y tú fuiste la desesperada, jsjsj. Aun así, te prometo que algún día te lo compensaré. Solo que ya conoces mi situación ahorita, pero créeme que algún día te lo compensaré. Espero que este aniversario tengamos fotitos para guardar para el siguiente.", r: 30, size: 2.0, hue: 350, speed: 0.16, ph: 4.8 },
+  { name: "Nuestras diferencias", text: "A lo largo de nuestro tiempo juntos nos dimos cuenta de que somos muy diferentes. No tenemos casi nada en común y eso es raro; se supone que las parejas tienen cosas en común y es por eso que se interesan el uno por el otro. La diferencia más complicada, claramente, es nuestra forma de ser. Somos casi como opuestos en ese sentido, pero eso no me hace amarte menos. Por esas diferencias pasamos muchas situaciones difíciles para ambos; aun así, después de todo, decidimos seguir juntos un día más", r: 34, size: 2.8, hue: 272, speed: 0.16, ph: 7.2 },
+  { name: "Tiempo juntos", media:"fotos/pla5.jfif", text: "Ese último año en la prepa pasamos mucho tiempo juntos. Creo que fue una etapa muy bonita; me encantaba cuando comíamos juntos muchísimo, jsjsjs, y también cuando podía dormir en tus piernas sin preocupaciones durante clases enteras. A pesar de que al principio fue algo distante, después todo fue normal y fluía de una buena manera. Personalmente, nunca me importó lo que los demás pensaban. Para mí fue una etapa que me gustó compartir contigo, aunque, claro, tú pasaste más tiempo con alguien más… aaa, eso ya me puso a pensar. Ya mejor fin al texto, que ya me puse triste y me enojé.", r: 38, size: 2.3, hue: 32, speed: 0.16, ph: 9.6 },
+  { name: "Primer aniversario", media:"fotos/pla6.jfif", text: "Hace un año cumplimos un añito, jiji, ¡qué rápido pasa el tiempo, ¿no?! Aun así se sintió como muy poco tiempo, y es que dicen que el tiempo pasa rápido cuando estás en el lugar correcto. Todo ese año tuvimos nuevas experiencias para los dos, aprendimos de errores, lloramos, reímos y fuimos felices juntos. Estoy feliz de que el tiempo juntos siga avanzando y de que, cuando estés leyendo esto, estemos a nada de cumplir 2 años. Espero poder compartir tiempo juntos hoy, mañana, el mes que viene y toda la vida.", r: 42, size: 3.0, hue: 46, speed: 0.16, ph: 12.0 },
+  { name: "Navidad", media:"videos/baile.jfif", text: "Sé que no fue nuestra primera Navidad, pero sí fue nuestra primera Navidad realmente juntos; esto porque, si recuerdas cómo pasamos la primera Navidad, pues digamos que no fue muy bonita y yo no estaba muy consciente que digamos, jeje. Nuestra segunda Navidad fue mucho mejor: por fin convivimos de una mejor manera, cenamos rico, estuvimos acostaditos un rato y nuestro gran bailecito que tuvimos, jsjs, fue todo muy especial. Espero que esta Navidad que viene pueda ser aún mejor y podamos hacerlo de una mejor manera.", r: 46, size: 2.1, hue: 150, speed: 0.16, ph: 14.4 },
+  { name: "Amor y Amistad", text: "Nuestro “primer” 14 de febrero bien y juntos. Ya sé que fue nuestro segundo, pero el primero no fue muy bonito que digamos y, sí, ya sé que fue mi culpa, pero en fin. Este 14 de febrero por fin hicimos cosas bonitas, aunque la verdad no recuerdo qué exactamente; solo que estuve con el amor de mi vida ese día, que pasamos un bonito momento juntos y que espero pasar muchísimos más. Ya verás que serán muuucho más lindos; ojalá y se te haga bonita la idea tanto como a mí. Sé que no se me da bien escribir cartas y mucho menos hablar de cómo me siento en ellas, pero aun así lo hago todo de corazón y espero te esté gustando este pequeño detalle.", r: 50, size: 2.6, hue: 322, speed: 0.16, ph: 16.8 },
+  { name: "Más diferencias...", text: "Hemos pasado muchas cosas juntos, entre ellas, problemas. A pesar de ya haber mejorado muchísimas cosas, aún sigue habiendo nuevos errores, nuevos problemas o, incluso, se repiten los mismos. Nos hemos equivocado muchísimas veces, pero creo que se trata un poco de eso: de equivocarse y aprender de ello, aunque no siempre es así; a veces se puede ser muy terco con algo. En esta parte quisiera hablar de mí, ya que últimamente yo soy el que está dando problemas. Créeme que si por mí fuera, nunca te causaría problemas. Me duele muchísimo cuando pasa ya cualquier cosa, porque ya no sé si cada día que pasa me amas menos, quieres terminar conmigo o me ves como una mala persona, y tal vez sí lo soy, pero nunca lo he hecho con intención. Nunca fui un hombre malo… soy un hombre torpe, uno que carga con el corazón limpio, pero las manos llenas de errores. Nunca supe herir con intención, pero aun así herí, y ese es el peso más insoportable: saber que, sin maldad, también se puede destruir todo lo que uno ama… Y que no hay redención suficiente para perdonarme a mí mismo…", r: 54, size: 2.4, hue: 258, speed: 0.16, ph: 19.2 },
+  { name: "Nuestro futuro", text: "Llegamos al final de este pequeño recorrido. No sé realmente qué nos depare el futuro; muchas cosas pueden cambiar, nosotros podemos cambiar y, para ser sincero, me da miedo que tú cambies o que me cambies, jsjs. Pero si todo sale bien para nosotros, espero que podamos conseguir un trabajito los dos y así poder empezar, ahora sí, nuestra vida juntos. Obvio no será fácil, pero para eso nos tendremos el uno al otro. Espero seguir cumpliendo años juntos de aquí hasta que mi cuerpo me dé vida o hasta que tú me lo permitas. Espero que todo esto te haya, mínimo, parecido bonito; sé que no es lo que esperabas y te mereces mucho más que esto, pero te prometo que algún día te lo daré.", r: 58, size: 3.4, hue: 178, speed: 0.16, ph: 21.6 }
 ];
 // Estrellas con mensaje: se pueden tocar en cualquier momento (no forman parte de la cronología).
 // Igual que los planetas, admiten  media: "fotos/mifoto.jpg"  o una lista de fotos/videos.  Agrega o quita las que quieras.
@@ -252,7 +252,7 @@ const spin = (x, z, ang) => { const c = Math.cos(ang), s2 = Math.sin(ang); retur
 function focusOn(p) {
   from = fpos.slice(); sw = 0; foc = p; curStar = null; seen.add(p.name);
   if (p.n === unlocked && unlocked < PLANETS.length) unlocked++;
-  document.getElementById('ct').textContent = p.n + ' · ' + p.name; document.getElementById('cp').textContent = p.text; setMedia(p.media);
+  document.getElementById('ct').textContent = p.n + ' · ' + p.name; document.getElementById('cp').textContent = p.text; setMedia(p.media); card.style.setProperty('--ah', p.hue);
   card.classList.remove('on'); clearTimeout(cardTimer); cardTimer = setTimeout(() => card.classList.add('on'), 1100);
   hint.style.opacity = 0;
 }
@@ -264,7 +264,13 @@ function unfocus() {
 // ===== Estado final: mantener presionado 2.5 s => el universo nace de nuevo =====
 const isFinal = () => collapsing && performance.now() - collapseStart >= COLLAPSE_DUR;
 const rbEl = document.getElementById('rb'), flashEl = document.getElementById('flash');
-let holdT = 0, holdStart = 0, hp = 0, exploding = false, exStart = 0;
+let holdT = 0, holdStart = 0, hp = 0, exploding = false, exStart = 0, heartCycleT = 0; // heartCycleT: tiempo (s) que lleva el corazón solo, recorriendo los colores
+const HEART_HUES = PLANETS.map(p => p.hue); // los colores de los 10 planetas, en el mismo orden de la cronología
+const HUE_CYCLE_DUR = 3.2; // segundos que se mantiene y funde cada color antes de pasar al siguiente
+function cycleHue(t, hues, dur) { // interpola en círculo entre colores consecutivos de la lista, por el camino más corto
+  const n = hues.length, ft = (t / dur) % n, i = Math.floor(ft), j = (i + 1) % n, u = ft - i, sm = u * u * (3 - 2 * u);
+  const a = hues[i], b = hues[j], d = ((b - a + 540) % 360) - 180; return a + d * sm;
+}
 function startHold(e) {
   if (!isFinal() || exploding || e.isPrimary === false) return;
   holdStart = performance.now();
@@ -276,7 +282,7 @@ function explode() { exploding = true; exStart = performance.now(); setTimeout(r
 function rebirth() {
   // sin animación de inicio: la galaxia, los planetas y las estrellas nacen desde el centro (ver bE)
   collapsing = false; foc = null; from = fpos.slice(); sw = 0; curStar = null; exploding = false; hp = 0;
-  seen.clear(); unlocked = 1; doneT = 0; heartPhase = 0; vx = 0; nextSh = 0; M.length = 0;
+  seen.clear(); unlocked = 1; doneT = 0; heartPhase = 0; heartCycleT = 0; vx = 0; nextSh = 0; M.length = 0;
   PLANETS.forEach(p => p.la = p.n <= unlocked ? 1 : 0); MSTARS.forEach(s => s.v = 0);
   card.classList.remove('on'); stopMedia(); hint.style.opacity = 0; rbEl.style.opacity = 0;
   capIdx = -1; t0 = performance.now() - INTRO * 1000; document.getElementById('skip').style.display = 'none';
@@ -297,7 +303,7 @@ function showStar(s) {
   if (curStar === s && card.classList.contains('on')) return closeCard();
   if (foc) unfocus(); // si estabas cerca de un planeta, la cámara se aleja
   clearTimeout(cardTimer); seen.add(s.key); curStar = s;
-  document.getElementById('ct').textContent = '★ ' + s.name; document.getElementById('cp').textContent = s.text; setMedia(s.media);
+  document.getElementById('ct').textContent = '★ ' + s.name; document.getElementById('cp').textContent = s.text; setMedia(s.media); card.style.setProperty('--ah', 205);
   card.classList.add('on'); hint.style.opacity = 0;
 }
 function hit(px, py) {
@@ -329,7 +335,7 @@ function frame(now) {
   if (!started) t0 = now;
   const el = (now - t0) / 1000, ti = Math.min(1, el / INTRO), e = ease(ti);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  ctx.fillStyle = '#010614'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#010204'; ctx.fillRect(0, 0, W, H);
   const cx0 = W / 2, cy0 = H / 2, m = Math.min(W, H);
 
   // Subtítulos
@@ -347,6 +353,10 @@ function frame(now) {
   const colE = ease(Math.min(1, colRaw / SPLIT)); // progreso de "el universo se comprime"
   const colE2 = ease(Math.max(0, (colRaw - SPLIT) / (1 - SPLIT))); // progreso de "el corazón crece", empieza después
   const fadeOther = (1 - Math.pow(colE, 3)) * bE, shrinkOther = fadeOther, growHeart = 1 + colE2 * .15; // todo lo demás se comprime primero; el corazón crece después
+  { const bgT = Math.pow(colE, 1.4), bgR = 1 + (2 - 1) * bgT, bgG = 4 + (2 - 4) * bgT, bgB = 13 + (3 - 13) * bgT; // de azul noche a casi negro neutro
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgb(${Math.round(bgR)},${Math.round(bgG)},${Math.round(bgB)})`; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter'; }
+  const heartAlone = collapsing && colRaw >= 1 && !exploding; if (heartAlone) heartCycleT += dt;
+  const heartTargetHue = heartAlone ? cycleHue(heartCycleT, HEART_HUES, HUE_CYCLE_DUR) : 205;
   if (!drag) pt += dt * 1000; // los planetas se detienen mientras giras la cámara
   for (const p of PLANETS) p.la += ((p.n <= unlocked ? 1 : 0) - p.la) * Math.min(1, dt * 3);
   sw = Math.min(1, sw + dt / 1.3);
@@ -371,8 +381,8 @@ function frame(now) {
     const [px, py, k] = proj(rx2, o.y * sc, rz2, shrink); if (k <= 0) return;
     const tw = .6 + .4 * Math.sin(now / 500 + o.tw), grow = shrink !== undefined && shrink > 1 ? Math.sqrt(shrink) : 1;
     const d = Math.min(7 * DPR * grow, Math.max(DPR * .8, o.s * k * .55 * (glow ? 1.3 : 1) * grow));
-    const hue = hueMix ? o.hue + (205 - o.hue) * hueMix : o.hue;
-    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${hue},100%,${o.l}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
+    const hue = hueMix ? o.hue + (heartTargetHue - o.hue) * hueMix : o.hue, li = hueMix ? Math.max(58, o.l - 20 * hueMix) : o.l; // leve ajuste para que el color se note un poco más, sin sobresaturar
+    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${hue},100%,${li}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
   };
   // ===== Fondo 3D: nebulosas, estrellas y flores en el espacio =====
   if (fadeOther > .003) {
@@ -425,10 +435,10 @@ function frame(now) {
   if (fadeOther > .003) for (const o of G) dot(o, 1, .75, false, shrinkOther);
   { const hb = beat * (1 + hp * .1 * Math.sin(now / 45)), ee = 1 - Math.pow(1 - exE, 3), tmp = {}, aH = .95 * heartIn * (1 - exE * exE);
     for (const o of Hh) {
-      if (exE > 0) { tmp.x = o.x + o.ex * ee * 70; tmp.y = o.y + o.ey * ee * 70; tmp.z = o.z + o.ez * ee * 70; tmp.hue = o.hue; tmp.l = o.l; tmp.s = o.s * (1 + exE); tmp.tw = o.tw; dot(tmp, hb, aH, true, growHeart, doneT); }
-      else dot(o, hb, aH, true, growHeart, doneT);
+      if (exE > 0) { tmp.x = o.x + o.ex * ee * 70; tmp.y = o.y + o.ey * ee * 70; tmp.z = o.z + o.ez * ee * 70; tmp.hue = o.hue; tmp.l = o.l; tmp.s = o.s * (1 + exE); tmp.tw = o.tw; dot(tmp, hb, aH, true, growHeart, colE2); }
+      else dot(o, hb, aH, true, growHeart, colE2);
     }
-    if (hp > .02 && exE === 0) for (const o of Hh) dot(o, hb, hp * .8, true, growHeart, doneT); }
+    if (hp > .02 && exE === 0) for (const o of Hh) dot(o, hb, hp * .8, true, growHeart, colE2); }
 
   { const [ox, oy, ok] = proj(0, 0, 0, shrinkOther), sq = .16 + sX * .9;
     for (const [rr, w] of [[ok * 26 * GS, 1.8], [ok * 9 * GS, 1.3]]) {
