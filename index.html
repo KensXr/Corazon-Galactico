@@ -29,7 +29,7 @@
   #start p { margin: 0; font-size: 14px; letter-spacing: .12em; color: #9fd0ff; animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
   #cm { display: none; gap: 8px; margin: 0 0 14px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
-  #cm img, #cm video { width: 100%; max-height: 24vh; object-fit: contain; border-radius: 10px; background: #020c22; }
+  #cm img, #cm video { width: 100%; max-height: 24vh; object-fit: contain; border-radius: 10px; background: transparent; }
   #rb { position: fixed; left: 0; right: 0; bottom: calc(46px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; letter-spacing: .1em; color: #e6e1d8; opacity: 0; transition: opacity 1.5s; pointer-events: none; text-shadow: 0 0 10px rgba(255,255,255,.3); }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity 2.2s ease-out; }
 </style>
@@ -223,11 +223,21 @@ document.getElementById('skip').addEventListener('click', () => { skipped = true
 // ===== Foto / video en la tarjeta =====
 function duck(d) { try { if (el) el.volume = d ? .15 : 1; else if (AC && master) { master.gain.cancelScheduledValues(AC.currentTime); master.gain.linearRampToValueAtTime(d ? .12 : .8, AC.currentTime + .6); } } catch (e) {} }
 function stopMedia() { document.querySelectorAll('#cm video').forEach(v => v.pause()); }
+function playCardVideos() { // arranca los videos de la tarjeta justo cuando ya terminó de abrirse
+  document.querySelectorAll('#cm video').forEach(v => v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }));
+}
 function setMedia(list) {
   const cm = document.getElementById('cm'); cm.innerHTML = '';
   [].concat(list || []).filter(Boolean).forEach(src => {
     const isV = /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(src), n = document.createElement(isV ? 'video' : 'img'); n.src = src;
-    if (isV) { n.controls = true; n.playsInline = true; n.preload = 'metadata'; n.addEventListener('play', () => duck(true)); n.addEventListener('pause', () => duck(false)); n.addEventListener('ended', () => duck(false)); }
+    if (isV) {
+      // se reproduce solo, en bucle, al 35% de volumen y sin ninguna interfaz encima
+      n.controls = false; n.removeAttribute('controls'); n.playsInline = true; n.setAttribute('playsinline', ''); n.setAttribute('webkit-playsinline', '');
+      n.disablePictureInPicture = true; n.setAttribute('controlslist', 'nodownload noplaybackrate nofullscreen noremoteplayback'); n.setAttribute('disableremoteplayback', '');
+      n.loop = true; n.preload = 'auto'; n.volume = .35; n.autoplay = true;
+      n.addEventListener('play', () => duck(true)); n.addEventListener('pause', () => duck(false));
+      n.addEventListener('click', () => { if (n.muted) { n.muted = false; n.volume = .35; } }); // si el navegador forzó mudo, se reactiva el sonido al tocarlo
+    }
     n.addEventListener('error', () => { n.remove(); if (!cm.children.length) cm.style.display = 'none'; });
     cm.appendChild(n);
   });
@@ -253,7 +263,7 @@ function focusOn(p) {
   from = fpos.slice(); sw = 0; foc = p; curStar = null; seen.add(p.name);
   if (p.n === unlocked && unlocked < PLANETS.length) unlocked++;
   document.getElementById('ct').textContent = p.n + ' · ' + p.name; document.getElementById('cp').textContent = p.text; setMedia(p.media); card.style.setProperty('--ah', p.hue);
-  card.classList.remove('on'); clearTimeout(cardTimer); cardTimer = setTimeout(() => card.classList.add('on'), 1100);
+  card.classList.remove('on'); clearTimeout(cardTimer); cardTimer = setTimeout(() => { card.classList.add('on'); setTimeout(playCardVideos, 400); }, 1100);
   hint.style.opacity = 0;
 }
 function unfocus() {
@@ -304,7 +314,7 @@ function showStar(s) {
   if (foc) unfocus(); // si estabas cerca de un planeta, la cámara se aleja
   clearTimeout(cardTimer); seen.add(s.key); curStar = s;
   document.getElementById('ct').textContent = '★ ' + s.name; document.getElementById('cp').textContent = s.text; setMedia(s.media); card.style.setProperty('--ah', 205);
-  card.classList.add('on'); hint.style.opacity = 0;
+  card.classList.add('on'); hint.style.opacity = 0; setTimeout(playCardVideos, 400);
 }
 function hit(px, py) {
   if ((performance.now() - t0) / 1000 < INTRO) return;
@@ -325,7 +335,7 @@ function hit(px, py) {
     return;
   }
   if (best.isStar) return showStar(best);
-  if (best === foc) { clearTimeout(cardTimer); card.classList.toggle('on'); if (!card.classList.contains('on')) stopMedia(); } else focusOn(best);
+  if (best === foc) { clearTimeout(cardTimer); card.classList.toggle('on'); if (card.classList.contains('on')) setTimeout(playCardVideos, 400); else stopMedia(); } else focusOn(best);
 }
 
 const INTRO = 6.5; let t0 = performance.now(), capIdx = -1;
