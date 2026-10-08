@@ -294,6 +294,8 @@ function explode() { exploding = true; exStart = performance.now(); setTimeout(r
 function rebirth() {
   // sin animación de inicio: la galaxia, los planetas y las estrellas nacen desde el centro (ver bE)
   collapsing = false; foc = null; from = fpos.slice(); sw = 0; curStar = null; exploding = false; hp = 0;
+  vy = .018; vx = (Math.random() - .5) * .006; // un impulso de cámara para que el universo nazca con vida, en vez de casi quieto
+  flashEl.style.transition = 'none'; flashEl.style.opacity = 1; flashEl.offsetHeight; flashEl.style.transition = 'opacity 1.6s ease-out'; flashEl.style.opacity = 0; // destello blanco al nacer
   seen.clear(); unlocked = 1; doneT = 0; heartPhase = 0; heartCycleT = 0; vx = 0; nextSh = 0; M.length = 0;
   PLANETS.forEach(p => p.la = p.n <= unlocked ? 1 : 0); MSTARS.forEach(s => s.v = 0);
   card.classList.remove('on'); stopMedia(); hint.style.opacity = 0; rbEl.style.opacity = 0;
@@ -342,6 +344,7 @@ function hit(px, py) {
 
 const INTRO = 6.5; let t0 = performance.now(), capIdx = -1;
 const ease = t => 1 - Math.pow(1 - t, 3), sm = t => t * t * (3 - 2 * t);
+const birthEase = t => { const c = 1.12; t -= 1; return 1 + (c + 1) * t * t * t + c * t * t; }; // rebote elástico suave (florece y se asienta)
 
 function frame(now) {
   if (!started) t0 = now;
@@ -363,7 +366,7 @@ function frame(now) {
   if (ti < 1) { rx = .04 + (H > W ? .3 : .2) * e; ry += .0015; }
   else if (collapsing && !drag) { vx *= .95; vy *= .95; const rt = Math.round(ry / 6.283) * 6.283, k = Math.min(1, dt * (heartAlone0 ? .9 : .6)); rx += (FRONT_RX - rx) * k; ry += (rt - ry) * k; }
   else if (!drag) { vx *= .95; vy += (.003 - vy) * .02; rx = Math.min(1.5, Math.max(-.2, rx + vx)); ry += vy; }
-  const bRaw = Math.min(1, (now - birthStart) / BIRTH_DUR), bE = ease(bRaw), heartIn = Math.min(1, bRaw * 3);
+  const bRaw = Math.min(1, (now - birthStart) / BIRTH_DUR), bE = birthEase(bRaw), heartIn = ease(Math.min(1, bRaw * 2.2));
   const colRaw = collapsing ? Math.min(1, (now - collapseStart) / COLLAPSE_DUR) : 0;
   const SPLIT = .8; // el universo se comprime (0 a SPLIT); el acercamiento de cámara arranca en 2/3; el corazón crece después, al final (SPLIT a 1) // primero se comprime el universo (0 a SPLIT), luego crece el corazón (SPLIT a 1)
   const colE = ease(Math.min(1, colRaw / SPLIT)); // progreso de "el universo se comprime"
