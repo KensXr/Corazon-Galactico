@@ -153,6 +153,15 @@ MSTARS.forEach((s, i) => { // posición repartida automáticamente: distintos á
   Object.assign(s, { x: Math.cos(a) * r, z: Math.sin(a) * r, y: sg * (9 + (i * 5) % 11) * GS, size: s.size || .9, hue: s.hue || 48, ph: i * 1.7, n: 0, isStar: true, key: 'star:' + s.name });
 });
 PLANETS.forEach((p, i) => { p.r *= GS; p.size *= GS; p.n = i + 1; p.oy = Math.sin(i * 2.1) * 6 * GS; });
+// Planetas-obstáculo llevan anillos elípticos inclinados; los felices, satélites brillantes que los orbitan
+const OBSTACLES = new Set(['Problemas', 'Nuestras diferencias', 'Más diferencias...']);
+PLANETS.forEach(p => { p.kind = OBSTACLES.has(p.name) ? 'obstacle' : 'happy'; p.tx = .9 + .35 * Math.sin(p.n * 1.7); p.ty = .6 * Math.cos(p.n * 2.3); });
+const RING_DEFS = [{ a: 2.5, b: 1.9, dt: 0, w: .1, al: .85, dash: false }, { a: 3.2, b: 2.5, dt: .14, w: .05, al: .55, dash: true }];
+// punto de una órbita/anillo inclinado alrededor del centro c (el planeta se mueve, así que se calcula con su posición actual)
+const ringPt = (c, a, b, th, tx, ty) => {
+  const x = a * Math.cos(th), z = b * Math.sin(th), y1 = z * Math.sin(tx), z1 = z * Math.cos(tx);
+  return [c[0] + x * Math.cos(ty) - y1 * Math.sin(ty), c[1] + x * Math.sin(ty) + y1 * Math.cos(ty), c[2] + z1];
+};
 // Corazón (solo contorno, de pie sobre el centro)
 const HY = 15 * GS, Hh = [];
 for (let i = 0; i < 2200; i++) {
@@ -198,7 +207,7 @@ for (let i = 0, NS = MOB ? 1600 : 2600; i < NS; i++) {
   ST.push({ x, y, z, R, v: far ? .002 : .01, b: (far ? .8 + Math.random() * 1.2 : .2 + Math.random() * .35) * (big ? 2.2 : 1), big, tw: Math.random() * 6.28 });
 }
 
-let rx = .55, ry = 0, vx = 0, vy = .003, zoom = 1, drag = false, lx = 0, ly = 0, sx0 = 0, sy0 = 0, pinch = 0, skipped = false;
+let rx = .60, ry = 0, vx = 0, vy = .003, zoom = 1, drag = false, lx = 0, ly = 0, sx0 = 0, sy0 = 0, pinch = 0, skipped = false;
 const ptr = new Map(), seen = new Set();
 const card = document.getElementById('card');
 cv.addEventListener('pointerdown', e => { startHold(e); ptr.set(e.pointerId, e); drag = true; lx = sx0 = e.clientX; ly = sy0 = e.clientY; cv.setPointerCapture(e.pointerId); });
@@ -247,6 +256,7 @@ function setMedia(list) {
 }
 
 // ===== Acercamiento a un planeta =====
+let warpT0 = -1e9, warpZ = 0; // Warp Drive: instante del clic y avance acumulado de las estrellas
 let pt = 0, heartPhase = 0, heartSpin = 0, heartAlonePrev = false, cam0 = 100, foc = null, from = [0, 0, 0], fpos = [0, 0, 0], sw = 1, fzL = 0, nearD = 14, lastNow = 0, cardTimer = 0, heartX = 0, heartY = 0, heartK = 0, doneT = 0;
 const HEART = { isHeart: true }; // objeto especial: se activa cuando ya se tocaron todos los planetas y estrellas
 const HEART_ZOOM = 33;
@@ -262,6 +272,7 @@ const ppos = (p, now) => { const a = pt / 1000 * DISK_W + p.ph; return [Math.cos
 const oval = (p, a) => [Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r];
 const spin = (x, z, ang) => { const c = Math.cos(ang), s2 = Math.sin(ang); return [x * c + z * s2, -x * s2 + z * c]; };
 function focusOn(p) {
+  warpT0 = performance.now(); // arranca el efecto Warp Drive al viajar a un recuerdo
   from = fpos.slice(); sw = 0; foc = p; curStar = null; seen.add(p.name);
   if (p.n === unlocked && unlocked < PLANETS.length) unlocked++;
   document.getElementById('ct').textContent = p.n + ' · ' + p.name; document.getElementById('cp').textContent = p.text; setMedia(p.media); card.style.setProperty('--ah', p.hue);
@@ -290,6 +301,8 @@ function startHold(e) {
 }
 function cancelHold() { clearTimeout(holdT); holdT = 0; }
 const BURST_MS = 1300, BIRTH_DUR = 3400; let birthStart = -1e9;
+const SHOCK_MAX = 520, SHOCK_DUR = 2300; let shockStart = -1e9;
+const SHOCK_DIRS = Array.from({ length: 420 }, () => { const u = Math.random() * 2 - 1, a = Math.random() * 6.283, r = Math.sqrt(1 - u * u); return { x: r * Math.cos(a), y: u, z: r * Math.sin(a) }; });
 function explode() { exploding = true; exStart = performance.now(); setTimeout(rebirth, BURST_MS); }
 function rebirth() {
   // sin animación de inicio: la galaxia, los planetas y las estrellas nacen desde el centro (ver bE)
@@ -300,7 +313,7 @@ function rebirth() {
   PLANETS.forEach(p => p.la = p.n <= unlocked ? 1 : 0); MSTARS.forEach(s => s.v = 0);
   card.classList.remove('on'); stopMedia(); hint.style.opacity = 0; rbEl.style.opacity = 0;
   capIdx = -1; t0 = performance.now() - INTRO * 1000; document.getElementById('skip').style.display = 'none';
-  birthStart = performance.now();
+  birthStart = performance.now(); shockStart = performance.now();
 }
 function triggerCollapse() {
   if (collapsing) return;
@@ -417,11 +430,39 @@ function frame(now) {
     g.addColorStop(0, `hsla(${n.h},90%,45%,${a})`); g.addColorStop(1, `hsla(${n.h},90%,45%,0)`);
     ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(q[0] - r, q[1] - r, r * 2, r * 2);
   }
+  const shockT = Math.min(1, (now - shockStart) / SHOCK_DUR), shockOn = shockT < 1 && shockT >= 0;
+  const shockR = (1 - Math.pow(1 - shockT, 3)) * SHOCK_MAX; // crece rápido al inicio y se frena, como una onda real
+  const shockA = Math.sin(Math.PI * Math.min(1, shockT * 1.6)) * (1 - shockT); // aparece, brilla, se apaga
+  if (shockOn) {
+    for (const d of SHOCK_DIRS) {
+      const q = proj(d.x * shockR, d.y * shockR, d.z * shockR); if (q[2] <= 0 || cam + q[3] < 2) continue;
+      const sz = Math.max(DPR * 1.6, 5 * DPR * q[2] / 40);
+      ctx.globalAlpha = Math.min(1, shockA * 1.3); ctx.fillStyle = '#ffffff'; ctx.fillRect(q[0] - sz / 2, q[1] - sz / 2, sz, sz);
+    }
+    // aro extra bien visible, centrado en el corazón, para que la onda se note sin dudas
+    const [ox, oy, ok] = proj(0, 0, 0); if (ok > 0) {
+      const rr = shockR * ok, rg = ctx.createRadialGradient(ox, oy, Math.max(0, rr - rr * .12), ox, oy, rr + rr * .12);
+      rg.addColorStop(0, 'rgba(255,255,255,0)'); rg.addColorStop(.5, `rgba(235,248,255,${shockA * .9})`); rg.addColorStop(1, 'rgba(235,248,255,0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(ox, oy, rr + rr * .12, 0, 6.283); ctx.fill();
+    }
+  }
+  // Warp Drive: sube rápido, se mantiene hasta los 400 ms y luego desacelera suavemente (~1.1 s en total)
+  const wt = now - warpT0, warpW = wt < 0 || wt > 1100 ? 0 : wt < 120 ? Math.pow(wt / 120, 2) : wt < 400 ? 1 : Math.pow(1 - (wt - 400) / 700, 2);
+  warpZ += dt * 1000 * warpW * 150; // multiplica la velocidad v de las estrellas (acumulado, así no hay saltos al terminar)
   for (const s of ST) {
     const wz = ((s.z + now * s.v + s.R) % (2 * s.R)) - s.R, q = proj(s.x, s.y, wz, shrinkOther); if (q[2] <= 0 || cam + q[3] < 3) continue;
-    const tw = .5 + .5 * Math.sin(now / 800 + s.tw), d = Math.min(6 * DPR, Math.max(DPR * .8, s.b * q[2]));
-    ctx.globalAlpha = fin * (1 - Math.pow(Math.abs(wz) / s.R, 4)) * (.4 + .6 * tw) * (s.big ? .55 : .9) * fadeOther;
-    ctx.fillStyle = s.big ? '#a9d4ff' : '#e6f3ff'; ctx.fillRect(q[0] - d / 2, q[1] - d / 2, d, d);
+    const tw = .5 + .5 * Math.sin(now / 800 + s.tw);
+    const hitW = shockOn ? Math.max(0, 1 - Math.abs(Math.hypot(s.x, s.y, wz) - shockR) / 42) * shockA : 0; // 1 = la onda está justo pasando por esta estrella
+    const d = Math.min(6 * DPR, Math.max(DPR * .8, s.b * q[2])) * (1 + hitW * 3.2);
+    ctx.globalAlpha = Math.min(1, fin * (1 - Math.pow(Math.abs(wz) / s.R, 4)) * (.4 + .6 * tw) * (s.big ? .55 : .9) * fadeOther + hitW * 1.4);
+    const col = hitW > .15 ? '#ffffff' : (s.big ? '#a9d4ff' : '#e6f3ff');
+    if (warpW > .02) { // Warp: las estrellas salen siempre radialmente desde el centro de la pantalla (hacia el frente), con estela
+      const ph = (s.tw * .159 + warpZ * s.v * .004) % 1, dx = q[0] - cx0, dy = q[1] - cy0, mh = 1 + ph * warpW * 3, mt = Math.max(.7, mh - .55 * warpW);
+      ctx.globalAlpha = Math.min(1, ctx.globalAlpha * (1 + warpW * .8) * (1 - warpW + warpW * Math.sin(Math.PI * ph)));
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(DPR * .8, d * .7); ctx.lineCap = 'round'; ctx.beginPath();
+      ctx.moveTo(cx0 + dx * mt, cy0 + dy * mt); ctx.lineTo(cx0 + dx * mh, cy0 + dy * mh); ctx.stroke(); continue;
+    }
+    ctx.fillStyle = col; ctx.fillRect(q[0] - d / 2, q[1] - d / 2, d, d);
   }
   for (const f of FL) {
     const wx = ((f.x + now * f.vx + 300) % 600) - 300, q = proj(wx, f.y + Math.sin(now / 2500 + f.ph) * 3, f.z, shrinkOther); if (q[2] <= 0 || cam + q[3] < 6) continue;
@@ -509,10 +550,31 @@ function frame(now) {
     ctx.globalAlpha = .12 * galA * (1 - fz * .8) * fadeOther; ctx.strokeStyle = '#6ab7ff'; ctx.lineWidth = DPR; ctx.beginPath();
     let pen = false;
     for (let i = 0; i <= 64; i++) { const a = i / 64 * 6.283, o = proj(Math.cos(a) * p.r, p.oy, Math.sin(a) * p.r, shrinkOther); if (cam + o[3] < 2) { pen = false; continue; } pen ? ctx.lineTo(o[0], o[1]) : ctx.moveTo(o[0], o[1]); pen = true; } ctx.stroke();
+    // anillos (obstáculos) y satélites (etapas felices): la mitad trasera se dibuja antes del planeta y la delantera después
+    const c = ppos(p, now), la = p.la * galA * fadeOther; let rings = null, sats = null;
+    if (la > .01 && p.kind === 'obstacle') rings = RING_DEFS.map(def => { const pts = []; for (let i = 0; i <= 72; i++) pts.push(proj(...ringPt(c, p.size * def.a, p.size * def.b, i / 72 * 6.283, p.tx, p.ty + def.dt), shrinkOther)); return { def, pts }; });
+    if (la > .01 && p.kind === 'happy') sats = Array.from({ length: 2 + p.n % 2 }, (_, j) => { const ang = now * (.0011 + .0004 * j) * (j % 2 ? -1 : 1) + p.n * 1.3 + j * 2.1; return proj(...ringPt(c, p.size * (1.9 + .55 * j), p.size * (1.9 + .55 * j), ang, p.tx + j * .5, p.ty - j * .7), shrinkOther); });
+    const drawRings = back => { if (!rings) return; for (const { def, pts } of rings) {
+      ctx.globalAlpha = la * def.al * (back ? .45 : 1); ctx.strokeStyle = `hsl(${p.hue},75%,72%)`; ctx.lineWidth = Math.max(DPR, r * def.w);
+      if (def.dash) { ctx.setLineDash([r * .5, r * .4]); ctx.lineDashOffset = -now / 60 * (r * .1); }
+      ctx.beginPath(); let pen = false;
+      for (let i = 0; i < 72; i++) { const a = pts[i], b = pts[i + 1];
+        if (a[2] <= 0 || b[2] <= 0 || cam + a[3] < 2 || cam + b[3] < 2 || ((a[3] + b[3]) / 2 > q[3]) !== back) { pen = false; continue; }
+        if (!pen) ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); pen = true; }
+      ctx.stroke(); ctx.setLineDash([]); } };
+    const drawSats = back => { if (!sats) return; ctx.globalCompositeOperation = 'lighter';
+      for (const sq of sats) { if (sq[2] <= 0 || cam + sq[3] < 2 || (sq[3] > q[3]) !== back) continue;
+        const sr = Math.max(1.2 * DPR, p.size * sq[2] * .14), hg = ctx.createRadialGradient(sq[0], sq[1], 0, sq[0], sq[1], sr * 3.2);
+        hg.addColorStop(0, `hsla(${p.hue},100%,75%,.55)`); hg.addColorStop(1, `hsla(${p.hue},100%,60%,0)`);
+        ctx.globalAlpha = la * (back ? .6 : 1); ctx.fillStyle = hg; ctx.fillRect(sq[0] - sr * 3.2, sq[1] - sr * 3.2, sr * 6.4, sr * 6.4);
+        ctx.fillStyle = `hsl(${p.hue},100%,93%)`; ctx.beginPath(); ctx.arc(sq[0], sq[1], sr, 0, 6.283); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over'; };
+    drawRings(true); drawSats(true);
     ctx.globalAlpha = galA * (.3 + .7 * p.la) * fadeOther;
     const g = ctx.createRadialGradient(q[0] - r * .35, q[1] - r * .35, r * .1, q[0], q[1], r * 1.05);
     g.addColorStop(0, `hsl(${p.hue},100%,85%)`); g.addColorStop(.6, `hsl(${p.hue},85%,45%)`); g.addColorStop(1, `hsl(${p.hue + 15},90%,15%)`);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 6.283); ctx.fill();
+    drawRings(false); drawSats(false);
     if (p.n <= unlocked && !seen.has(p.name)) { const pu = (now / 1200) % 1; ctx.globalAlpha = (1 - pu) * .6 * galA * p.la * fadeOther; ctx.strokeStyle = '#9fd0ff'; ctx.lineWidth = 1.5 * DPR; ctx.beginPath(); ctx.arc(q[0], q[1], r * (1.4 + pu * 1.2), 0, 6.283); ctx.stroke(); }
     if (ti >= 1 && p.la > .02 && !(p === foc && fz > .3)) { ctx.globalAlpha = .85 * p.la * fadeOther; ctx.fillStyle = '#cfe8ff'; ctx.font = `${Math.max(9, Math.min(30, p.sk * 1.7)) * DPR}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText(p.n + ' · ' + p.name, q[0], q[1] + r + 15 * DPR); }
   }
