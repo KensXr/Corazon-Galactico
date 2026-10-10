@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Galaxia Corazón</title>
+<title>Nuestro Universo</title>
 <style>
   :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
@@ -126,7 +126,7 @@ function begin() { if (started) return; started = true; tryStart(); t0 = perform
 startEl.addEventListener('click', begin); addEventListener('keydown', onKey);
 document.addEventListener('visibilitychange', () => { if (!on) return; if (document.hidden) { el ? el.pause() : AC.suspend(); } else { el ? el.play() : AC.resume(); } });
 
-const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const cv = document.getElementById('c'), ctx = cv.getContext('2d', { alpha: false });
 const cap = document.getElementById('cap'), hint = document.getElementById('hint');
 let W, H, DPR;
 const MOB = matchMedia('(pointer: coarse)').matches || innerWidth < 700;
@@ -186,6 +186,15 @@ function flower(x, y, r, rot, a) {
 }
 // Lluvia de estrellas: cada tanto, en un lugar distinto del cielo
 const M = []; let nextSh = 0, lsx = 9, lsy = 9;
+// Cometa: viaja muy lento por el fondo; su cola (iones azules + polvo cálido) son partículas gaseosas que reaccionan a la cámara
+const GLOW_SPR = (() => { const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'), cg = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+  cg.addColorStop(0, 'rgba(255,255,255,1)'); cg.addColorStop(.2, 'rgba(210,248,255,.85)'); cg.addColorStop(.5, 'rgba(90,220,255,.4)'); cg.addColorStop(1, 'rgba(20,90,255,0)'); g.fillStyle = cg; g.fillRect(0, 0, 512, 512); return c; })();
+const nebSprite = n => n.spr || (n.spr = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, `hsla(${n.h},90%,45%,1)`); gr.addColorStop(1, `hsla(${n.h},90%,45%,0)`); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); return c; })());
+const COMET = { on: false, next: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, t0: 0, emit: 0, pq: null, parts: [] };
+const mkSprite = (h, l) => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, `hsla(${h},90%,${l}%,1)`); gr.addColorStop(.35, `hsla(${h},90%,${l - 15}%,.45)`); gr.addColorStop(1, `hsla(${h},90%,${l - 25}%,0)`); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; };
+const SPR_ION = mkSprite(195, 80), SPR_DUST = mkSprite(38, 72), SPR_HEAD = mkSprite(200, 96);
 // Flores azules de otro tipo (margarita)
 const FY = Array.from({ length: MOB ? 6 : 10 }, () => ({ x: (Math.random() * 2 - 1) * 300, y: (Math.random() * 2 - 1) * 120, z: (Math.random() * 2 - 1) * 300, r: 2.5 + Math.random() * 4.5, vx: (Math.random() * .5 + .2) * .003, ph: Math.random() * 6.28, rot: Math.random() * 6.28 }));
 function daisy(x, y, r, rot, a) {
@@ -359,6 +368,7 @@ const INTRO = 6.5; let t0 = performance.now(), capIdx = -1;
 const ease = t => 1 - Math.pow(1 - t, 3), sm = t => t * t * (3 - 2 * t);
 const birthEase = t => { const c = 1.12; t -= 1; return 1 + (c + 1) * t * t * t + c * t * t; }; // rebote elástico suave (florece y se asienta)
 
+let rbLast = -1;
 function frame(now) {
   if (!started) t0 = now;
   const el = (now - t0) / 1000, ti = Math.min(1, el / INTRO), e = ease(ti);
@@ -396,7 +406,7 @@ function frame(now) {
   { const s = sm(sw), tp = foc ? (foc.isHeart ? [0, HY, 0] : ppos(foc, now)) : [0, 0, 0]; for (let i = 0; i < 3; i++) fpos[i] = from[i] * (1 - s) + tp[i] * s; }
   { const tgt = (foc && (!foc.isHeart || colRaw >= 2 / 3)) ? 1 : 0; fzL += Math.sign(tgt - fzL) * Math.min(Math.abs(tgt - fzL), dt / 1.3); }
   const fz = sm(fzL); if (foc) nearD += ((foc.isHeart ? HEART_ZOOM : foc.size * 4.5) - nearD) * Math.min(1, dt * 6);
-  rbEl.style.opacity = collapsing && colRaw >= 1 ? .85 : 0;
+  { const rbO = collapsing && colRaw >= 1 ? .85 : 0; if (rbO !== rbLast) { rbEl.style.opacity = rbO; rbLast = rbO; } }
   const heartReady = seen.size >= TAPPABLE.length; doneT += ((heartReady ? 1 : 0) - doneT) * Math.min(1, dt * 9); // se vuelve 1 al tocar todo
   const galA = sm(Math.max(0, (ti - .3) / .5)), cam = (900 * (1 - e) + 122 * e) * (1 - fz) + nearD * fz; cam0 = cam;
   const f = m * .9 * (zoom * (1 - fz) + fz);
@@ -408,27 +418,39 @@ function frame(now) {
   // ¿cruzó un ciclo completo? -> ese es el instante exacto de "un latido", ahí sincronizamos el sonido
   if (collapsing && Math.floor(heartPhase / 6.283) > Math.floor(prevPhase / 6.283)) heartBeatTick();
   const proj = (x, y, z, shrink) => { x -= fpos[0]; y -= fpos[1]; z -= fpos[2]; if (shrink !== undefined) { x *= shrink; y *= shrink; z *= shrink; } const X = x * cy + z * sy, Z0 = -x * sy + z * cy, Y = y * cX - Z0 * sX, Z = y * sX + Z0 * cX, D = cam + Z, k = D < .5 ? 0 : f / D; return [cx0 + X * k, cy0 - Y * k, k, Z]; };
+  const PS = [0, 0, 0, 0]; // proj reutilizando el mismo arreglo (sin basura por frame); se consume antes de la siguiente llamada
+  const projS = (x, y, z, shrink) => { x -= fpos[0]; y -= fpos[1]; z -= fpos[2]; if (shrink !== undefined) { x *= shrink; y *= shrink; z *= shrink; } const X = x * cy + z * sy, Z0 = -x * sy + z * cy, Y = y * cX - Z0 * sX, Z = y * sX + Z0 * cX, D = cam + Z, k = D < .5 ? 0 : f / D; PS[0] = cx0 + X * k; PS[1] = cy0 - Y * k; PS[2] = k; PS[3] = Z; return PS; };
   const diskAng = pt / 1000 * DISK_W;
   if (heartAlone0 && !heartAlonePrev) { heartSpin = ((heartSpin % 6.283) + 6.283) % 6.283; if (heartSpin > Math.PI) heartSpin -= 6.283; } // toma el camino corto (como mucho media vuelta), no el ángulo acumulado real
   heartSpin = heartAlone0 ? heartSpin + (0 - heartSpin) * Math.min(1, dt * .9) : diskAng; // suaviza el regreso a 0 en vez de saltar de golpe
   heartAlonePrev = heartAlone0;
+  let _an = NaN, _cc = 1, _cs = 0; // cos/sin del ángulo de giro, calculados una vez por ángulo y no por partícula
   const dot = (o, sc, a, glow, shrink, hueMix, ang) => {
-    const [rx2, rz2] = spin(o.x * sc, o.z * sc, ang !== undefined ? ang : diskAng);
-    const [px, py, k] = proj(rx2, o.y * sc, rz2, shrink); if (k <= 0) return;
-    const tw = .6 + .4 * Math.sin(now / 500 + o.tw), grow = shrink !== undefined && shrink > 1 ? Math.sqrt(shrink) : 1;
+    const an = ang !== undefined ? ang : diskAng; if (an !== _an) { _an = an; _cc = Math.cos(an); _cs = Math.sin(an); }
+    const ox0 = o.x * sc, oz0 = o.z * sc;
+    let x = (ox0 * _cc + oz0 * _cs) - fpos[0], y = o.y * sc - fpos[1], z = (-ox0 * _cs + oz0 * _cc) - fpos[2];
+    if (shrink !== undefined) { x *= shrink; y *= shrink; z *= shrink; }
+    const X = x * cy + z * sy, Z0 = -x * sy + z * cy, Y = y * cX - Z0 * sX, D = cam + (y * sX + Z0 * cX), k = D < .5 ? 0 : f / D; if (k <= 0) return;
+    const px = cx0 + X * k, py = cy0 - Y * k, grow = shrink !== undefined && shrink > 1 ? Math.sqrt(shrink) : 1;
     const d = Math.min(7 * DPR * grow, Math.max(DPR * .8, o.s * k * .55 * (glow ? 1.3 : 1) * grow));
-    const hue = hueMix ? o.hue + (heartTargetHue - o.hue) * hueMix : o.hue, li = hueMix ? Math.max(58, o.l - 20 * hueMix) : o.l; // leve ajuste para que el color se note un poco más, sin sobresaturar
-    const midDip = hueMix ? Math.sin(Math.PI * hueProgress) : 0, sat = 100 - 55 * midDip, li2 = Math.min(96, li + 16 * midDip); // a mitad de camino baja la saturación (pasa por blanco cálido) en vez de verse morado
-    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = `hsl(${hue},${sat}%,${li2}%)`; ctx.fillRect(px - d / 2, py - d / 2, d, d);
+    if (px + d / 2 < 0 || px - d / 2 > W || py + d / 2 < 0 || py - d / 2 > H) return; // fuera de pantalla: no se ve, no se dibuja
+    const tw = .6 + .4 * Math.sin(now / 500 + o.tw);
+    let col;
+    if (!hueMix) col = o._h === o.hue && o._l === o.l ? o._c : (o._h = o.hue, o._l = o.l, o._c = `hsl(${o.hue},100%,${Math.min(96, o.l)}%)`); // color fijo: se arma una sola vez
+    else {
+      const hue = o.hue + (heartTargetHue - o.hue) * hueMix, li = Math.max(58, o.l - 20 * hueMix); // leve ajuste para que el color se note un poco más, sin sobresaturar
+      const midDip = Math.sin(Math.PI * hueProgress), sat = 100 - 55 * midDip, li2 = Math.min(96, li + 16 * midDip); // a mitad de camino baja la saturación (pasa por blanco cálido)
+      col = `hsl(${hue},${sat}%,${li2}%)`;
+    }
+    ctx.globalAlpha = a * tw * galA * (shrink !== undefined && shrink < 1 ? shrink : 1); ctx.fillStyle = col; ctx.fillRect(px - d / 2, py - d / 2, d, d);
   };
   // ===== Fondo 3D: nebulosas, estrellas y flores en el espacio =====
   if (fadeOther > .003) {
   for (const n of NEB) {
     const q = proj(n.x + Math.sin(now / 9000 + n.p) * 8, n.y, n.z + Math.cos(now / 11000 + n.p) * 8, shrinkOther); if (q[2] <= 0 || cam + q[3] < 10) continue;
     const r = Math.min(n.r * q[2], m * 1.4), a = .42 * nA * Math.min(1, (cam + q[3]) / (n.r * .8)) * fadeOther;
-    const g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], r);
-    g.addColorStop(0, `hsla(${n.h},90%,45%,${a})`); g.addColorStop(1, `hsla(${n.h},90%,45%,0)`);
-    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(q[0] - r, q[1] - r, r * 2, r * 2);
+    if (q[0] + r < 0 || q[0] - r > W || q[1] + r < 0 || q[1] - r > H) continue; // completamente fuera de pantalla
+    ctx.globalAlpha = a; ctx.drawImage(nebSprite(n), q[0] - r, q[1] - r, r * 2, r * 2);
   }
   const shockT = Math.min(1, (now - shockStart) / SHOCK_DUR), shockOn = shockT < 1 && shockT >= 0;
   const shockR = (1 - Math.pow(1 - shockT, 3)) * SHOCK_MAX; // crece rápido al inicio y se frena, como una onda real
@@ -450,10 +472,11 @@ function frame(now) {
   const wt = now - warpT0, warpW = wt < 0 || wt > 1100 ? 0 : wt < 120 ? Math.pow(wt / 120, 2) : wt < 400 ? 1 : Math.pow(1 - (wt - 400) / 700, 2);
   warpZ += dt * 1000 * warpW * 150; // multiplica la velocidad v de las estrellas (acumulado, así no hay saltos al terminar)
   for (const s of ST) {
-    const wz = ((s.z + now * s.v + s.R) % (2 * s.R)) - s.R, q = proj(s.x, s.y, wz, shrinkOther); if (q[2] <= 0 || cam + q[3] < 3) continue;
+    const wz = ((s.z + now * s.v + s.R) % (2 * s.R)) - s.R, q = projS(s.x, s.y, wz, shrinkOther); if (q[2] <= 0 || cam + q[3] < 3) continue;
     const tw = .5 + .5 * Math.sin(now / 800 + s.tw);
     const hitW = shockOn ? Math.max(0, 1 - Math.abs(Math.hypot(s.x, s.y, wz) - shockR) / 42) * shockA : 0; // 1 = la onda está justo pasando por esta estrella
     const d = Math.min(6 * DPR, Math.max(DPR * .8, s.b * q[2])) * (1 + hitW * 3.2);
+    if (warpW <= .02 && (q[0] + d / 2 < 0 || q[0] - d / 2 > W || q[1] + d / 2 < 0 || q[1] - d / 2 > H)) continue; // fuera de pantalla (con warp se conserva: la estela puede entrar)
     ctx.globalAlpha = Math.min(1, fin * (1 - Math.pow(Math.abs(wz) / s.R, 4)) * (.4 + .6 * tw) * (s.big ? .55 : .9) * fadeOther + hitW * 1.4);
     const col = hitW > .15 ? '#ffffff' : (s.big ? '#a9d4ff' : '#e6f3ff');
     if (warpW > .02) { // Warp: las estrellas salen siempre radialmente desde el centro de la pantalla (hacia el frente), con estela
@@ -488,6 +511,49 @@ function frame(now) {
       }
     }
   }
+  { // ---- Cometa ----
+    const C = COMET, R0 = 720;
+    if (!C.on && ti >= 1 && !collapsing && now > C.next) {
+      if (!C.next) C.next = now + 5000; else {
+        const th = Math.random() * 6.283, d = 330 + Math.random() * 130, sp = 9 + Math.random() * 4, y0 = -90 + Math.random() * 220, dirS = Math.random() < .5 ? 1 : -1;
+        const tx = -Math.sin(th) * dirS, tz = Math.cos(th) * dirS, s0 = Math.sqrt(R0 * R0 - d * d), ty = (Math.random() - .5) * .12;
+        C.x = d * Math.cos(th) - tx * s0; C.y = y0 - ty * s0; C.z = d * Math.sin(th) - tz * s0; C.vx = tx * sp; C.vy = ty * sp; C.vz = tz * sp; C.on = true; C.t0 = now; C.emit = 0; C.pq = null; C.parts.length = 0;
+      }
+    }
+    if (C.on) { C.x += C.vx * dt; C.y += C.vy * dt; C.z += C.vz * dt; }
+    const dist = Math.hypot(C.x, C.y, C.z), hA = C.on ? Math.max(0, Math.min(1, (R0 - 20 - dist) / 100)) : 0;
+    if (C.on && hA > 0) { // emitir partículas: iones (rectos, azules, rápidos) y polvo (cálido, lento, ancho)
+      C.emit += dt * (MOB ? 26 : 40);
+      while (C.emit >= 1 && C.parts.length < (MOB ? 220 : 380)) {
+        C.emit -= 1; const ion = Math.random() < .55, ax = C.x / dist, ay = C.y / dist, az = C.z / dist, sp = ion ? 24 + Math.random() * 6 : 5 + Math.random() * 4, j = ion ? .9 : 2.4, sd = ion ? .5 : 3.2;
+        C.parts.push({ x: C.x + (Math.random() - .5) * j, y: C.y + (Math.random() - .5) * j, z: C.z + (Math.random() - .5) * j,
+          vx: ax * sp + (Math.random() - .5) * sd + (ion ? 0 : C.vx * .55), vy: ay * sp + (Math.random() - .5) * sd + (ion ? 0 : C.vy * .55), vz: az * sp + (Math.random() - .5) * sd + (ion ? 0 : C.vz * .55),
+          age: 0, life: ion ? 6.5 + Math.random() * 1.5 : 11 + Math.random() * 3, r0: ion ? 1.6 : 3.2, grow: ion ? 3.2 : 7, ion, ox: 0, oy: 0, hA });
+      }
+      if (C.emit > 1) C.emit = 0;
+    }
+    const hq = C.on ? proj(C.x, C.y, C.z, shrinkOther) : null;
+    const hdx = hq && C.pq ? hq[0] - C.pq[0] : 0, hdy = hq && C.pq ? hq[1] - C.pq[1] : 0; C.pq = hq ? [hq[0], hq[1]] : null; // movimiento en pantalla (casi todo es de la cámara)
+    const lim = 90 * DPR, dec = Math.exp(-dt * .9), vis = fadeOther > .003 && galA > .01;
+    if (vis) ctx.globalCompositeOperation = 'lighter';
+    for (let i = C.parts.length - 1; i >= 0; i--) {
+      const p = C.parts[i]; p.age += dt; if (p.age >= p.life) { C.parts.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      const a = p.age / p.life; // la cola se "arrastra" con el movimiento de la cámara y se recupera despacio
+      p.ox = Math.max(-lim, Math.min(lim, (p.ox - hdx * .4 * a) * dec)); p.oy = Math.max(-lim, Math.min(lim, (p.oy - hdy * .4 * a) * dec));
+      if (!vis) continue;
+      const q = proj(p.x, p.y, p.z, shrinkOther); if (q[2] <= 0 || cam + q[3] < 3) continue;
+      const rr = Math.max(1.5 * DPR, Math.min(46 * DPR, p.r0 * (1 + p.grow * a) * q[2])), al = Math.pow(1 - a, 1.7) * (p.ion ? .26 : .17) * Math.min(1, a * 12 + .25) * fadeOther * galA * p.hA;
+      ctx.globalAlpha = al; ctx.drawImage(p.ion ? SPR_ION : SPR_DUST, q[0] + p.ox - rr, q[1] + p.oy - rr, rr * 2, rr * 2);
+    }
+    if (vis && hq && hq[2] > 0 && cam + hq[3] > 3 && hA > 0) { // cabeza: coma brillante + núcleo
+      const k = hq[2], rr = Math.max(3 * DPR, Math.min(11 * DPR, 5 * k)), al = hA * fadeOther * galA;
+      ctx.globalAlpha = al * .55; ctx.drawImage(SPR_HEAD, hq[0] - rr * 4.5, hq[1] - rr * 4.5, rr * 9, rr * 9);
+      ctx.globalAlpha = al * .95; ctx.drawImage(SPR_HEAD, hq[0] - rr * 1.7, hq[1] - rr * 1.7, rr * 3.4, rr * 3.4);
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(hq[0], hq[1], rr * .38, 0, 6.283); ctx.fill();
+    }
+    if (C.on && dist > R0 && now - C.t0 > 8000) { C.on = false; C.next = now + 20000 + Math.random() * 20000; }
+  }
   if (fadeOther > .003) for (let i = M.length - 1; i >= 0; i--) {
     const m = M[i], age = now - m.s; if (age < 0) continue; if (age > m.life) { M.splice(i, 1); continue; }
     const u = age / 1000, tu = Math.max(0, u - .25), q1 = proj(m.x + m.vx * u, m.y + m.vy * u, m.z + m.vz * u, shrinkOther), q0 = proj(m.x + m.vx * tu, m.y + m.vy * tu, m.z + m.vz * tu, shrinkOther);
@@ -508,8 +574,7 @@ function frame(now) {
   { const [ox, oy, ok] = proj(0, 0, 0, shrinkOther), sq = .16 + sX * .9;
     for (const [rr, w] of [[ok * 26 * GS, 1.8], [ok * 9 * GS, 1.3]]) {
       ctx.save(); ctx.translate(ox, oy); ctx.scale(w, sq);
-      const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, rr); cg.addColorStop(0, 'rgba(255,255,255,1)'); cg.addColorStop(.2, 'rgba(210,248,255,.85)'); cg.addColorStop(.5, 'rgba(90,220,255,.4)'); cg.addColorStop(1, 'rgba(20,90,255,0)');
-      ctx.globalAlpha = galA * fadeOther; ctx.fillStyle = cg; ctx.fillRect(-rr, -rr, rr * 2, rr * 2); ctx.restore(); } }
+      ctx.globalAlpha = galA * fadeOther; ctx.drawImage(GLOW_SPR, -rr, -rr, rr * 2, rr * 2); ctx.restore(); } } // mismo gradiente, precalculado una vez
   // Resplandor del corazón (crece y se torna más cálido al completar la cronología, y se expande al colapsar el universo)
   const [hx, hy, hk] = proj(0, HY, 0), gr = hk * (12 + 5 * doneT) * (1 + colE2 * 1.3);
   heartX = hx; heartY = hy; heartK = hk;
